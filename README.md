@@ -1,39 +1,94 @@
 # Multi-Agent Coordination Patterns
 
-Proven patterns for coordinating multiple AI agents — capability graphs, intent routing, consensus mechanisms, and more.
+Proven patterns for coordinating multiple AI agents — capability graphs, intent routing, semantic extraction, and more.
 
 Built as a proper Python package using [uv](https://github.com/astral-sh/uv).
 
 ## Quick Start
 
 ```bash
-# Install the package in dev mode
+# Install all dependencies
 uv sync --all-extras
 
 # Run the demo
 uv run coordination-patterns
 
 # Run tests
-uv run pytest
+uv run pytest -v
 ```
 
 ## Patterns
 
 ### 1. Capability Graph Router
-Route requests to specialized agents using a lookup table of `(action, resource)` pairs.
+Route requests to specialized agents using `(action, resource)` → `agent` lookup.
 
 ```python
 from coordination_patterns import AgentRouter, RoutingIntent
 
 router = AgentRouter()
-intent = RoutingIntent(
-    action="find",
-    resource="sales_report",
-    parameters={"date_range": "Q1-2026"},
-)
+intent = RoutingIntent(action="find", resource="sales_report", parameters={"quarter": "Q1"})
 result = router.route_request(intent)
-# → "Routing to SalesAgent with params: {'date_range': 'Q1-2026'}"
-# → "Success"
+# → "Routing to SalesAgent with params: {'quarter': 'Q1'}"
+```
+
+### 2. LLM Interface (Swappable Backends)
+Talk to any OpenAI-compatible LLM without hardcoding endpoints.
+
+```python
+from coordination_patterns import LLMClient, LLMConfig
+
+# Swap backends by changing config:
+client = LLMClient(LLMConfig.cacique())   # Cacique server
+client = LLMClient(LLMConfig.ollama())     # Local Ollama
+client = LLMClient(LLMConfig.openai())     # OpenAI API
+
+response = client.chat(messages=[{"role": "user", "content": "Hello"}])
+```
+
+### 3. Semantic Intent Extraction (Full Pipeline)
+Natural language → LLM extracts structured intent → route to agent.
+
+```python
+from coordination_patterns import IntentExtractor, LLMConfig
+
+with IntentExtractor(LLMConfig.cacique()) as extractor:
+    result = extractor.process("Find the Q1 sales report")
+    # Internally:
+    # 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
+    # 2. Router dispatches to SalesAgent
+    # 3. Returns result
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   User Input (NL)                       │
+│            "Find the Q1 sales report"                   │
+└──────────────────────┬──────────────────────────────────┘
+                       ▼
+            ┌────────────────────┐
+            │  IntentExtractor   │
+            │  (Pattern #3)      │
+            └───────┬────────────┘
+                    │ extracts structured intent
+                    ▼
+            ┌────────────────────┐
+            │    LLMClient       │ ◄── LLMConfig (swappable)
+            │  (Pattern #2)      │     cacique / ollama / openai
+            └───────┬────────────┘
+                    │ returns RoutingIntent
+                    ▼
+            ┌────────────────────┐
+            │    AgentRouter     │
+            │  (Pattern #1)      │
+            └───────┬────────────┘
+                    │ capability_graph lookup
+                    ▼
+            ┌────────────────────┐
+            │   Target Agent     │
+            │  SalesAgent, etc.  │
+            └────────────────────┘
 ```
 
 ## Project Structure
@@ -42,24 +97,26 @@ result = router.route_request(intent)
 coordination-patterns/
 ├── pyproject.toml
 ├── uv.lock
-├── src/
-│   └── coordination_patterns/
-│       ├── __init__.py
-│       ├── __main__.py
-│       └── capability_router/
-│           ├── __init__.py
-│           └── pattern.py
+├── src/coordination_patterns/
+│   ├── __init__.py              # package exports
+│   ├── __main__.py              # CLI demo
+│   ├── capability_router/       # Pattern #1
+│   │   └── pattern.py
+│   ├── llm_interface/           # Pattern #2
+│   │   ├── config.py            # LLMConfig (swappable backends)
+│   │   └── client.py            # LLMClient (OpenAI-compatible)
+│   └── intent_extractor/        # Pattern #3
+│       └── extractor.py         # IntentExtractor (NL → route)
 └── tests/
-    └── test_capability_router.py
 ```
 
-## uv Cheat Sheet (Learning Guide)
+## uv Quick Reference
 
 | Command | What it does |
 |---|---|
 | `uv init` | Create a new project |
 | `uv add <pkg>` | Add dependency + update lockfile |
-| `uv sync` | Install deps from lockfile (like `pip install -e .`) |
+| `uv sync` | Install deps from lockfile |
 | `uv run <cmd>` | Run a command in the virtual env |
 | `uv remove <pkg>` | Remove a dependency |
 | `uv lock` | Regenerate the lockfile |
