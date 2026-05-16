@@ -1,8 +1,9 @@
 """CLI for multi-agent coordination patterns.
 
 Usage:
-    coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local
-    coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local --provider-embedding ollama-local --cache
+    coordination-patterns extract "Find the Q1 sales report"
+    coordination-patterns extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
+    coordination-patterns extract "Find the Q1 sales report" --cache
     coordination-patterns --help
 """
 
@@ -14,6 +15,13 @@ import sys
 from coordination_patterns.llm_interface.config import EmbeddingConfig, LLMConfig
 from coordination_patterns.intent_extractor.extractor import IntentExtractor
 
+
+# Default values — used when the user provides no provider/model flags
+DEFAULT_PROVIDER_LLM: str = "ollama-local"
+DEFAULT_PROVIDER_EMBEDDING: str = "ollama-local"
+DEFAULT_MODEL_LLM: str = "qwen3.5:2b"
+DEFAULT_MODEL_EMBEDDING: str = "nomic-embed-text"
+DEFAULT_HOST: str = "localhost"
 
 # Available LLM providers
 LLM_PROVIDER_OPTIONS: dict[str, dict[str, str]] = {
@@ -44,33 +52,39 @@ EMBEDDING_MODELS: dict[str, str] = {
 
 
 def build_llm_config(
-    provider: str, model: str | None, host: str | None
+    provider: str | None, model: str | None, host: str | None
 ) -> LLMConfig:
-    """Build LLMConfig from CLI args."""
-    if provider == "ollama-local":
-        cfg = LLMConfig.ollama(host=host or "localhost")
+    """Build LLMConfig from CLI args, applying defaults."""
+    p = provider or DEFAULT_PROVIDER_LLM
+    m = model or DEFAULT_MODEL_LLM
+    h = host or DEFAULT_HOST
+
+    if p == "ollama-local":
+        cfg = LLMConfig.ollama(host=h, model=m)
     else:
-        print(f"Error: Unknown LLM provider '{provider}'.", file=sys.stderr)
+        print(f"Error: Unknown LLM provider '{p}'.", file=sys.stderr)
         print(
             f"Available: {', '.join(LLM_PROVIDER_OPTIONS.keys())}",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    if model:
-        cfg.model = model
     return cfg
 
 
 def build_embedding_config(
-    provider: str, model: str | None, host: str | None
+    provider: str | None, model: str | None, host: str | None
 ) -> EmbeddingConfig:
-    """Build EmbeddingConfig from CLI args."""
-    if provider == "ollama-local":
-        cfg = EmbeddingConfig.ollama(host=host or "localhost")
+    """Build EmbeddingConfig from CLI args, applying defaults."""
+    p = provider or DEFAULT_PROVIDER_EMBEDDING
+    m = model or DEFAULT_MODEL_EMBEDDING
+    h = host or DEFAULT_HOST
+
+    if p == "ollama-local":
+        cfg = EmbeddingConfig.ollama(host=h, model=m)
     else:
         print(
-            f"Error: Unknown embedding provider '{provider}'.",
+            f"Error: Unknown embedding provider '{p}'.",
             file=sys.stderr,
         )
         print(
@@ -79,31 +93,26 @@ def build_embedding_config(
         )
         sys.exit(1)
 
-    if model:
-        cfg.model = model
     return cfg
 
 
 def cmd_extract(args: argparse.Namespace) -> None:
     """Run the semantic intent extractor on user input."""
-    llm_config = build_llm_config(args.provider_llm, args.model, args.host)
+    llm_config = build_llm_config(args.provider_llm, args.model_llm, args.host)
 
     embed_config = None
     if args.cache:
-        if not args.provider_embedding:
-            print(
-                "Error: --cache requires --provider-embedding.",
-                file=sys.stderr,
-            )
-            sys.exit(1)
         embed_config = build_embedding_config(
-            args.provider_embedding, args.embed_model, args.host
+            args.provider_embedding, args.model_embedding, args.host
         )
 
-    print(f"LLM Provider: {args.provider_llm} (model: {llm_config.model})")
+    effective_llm_provider = args.provider_llm or DEFAULT_PROVIDER_LLM
+    effective_embed_provider = args.provider_embedding or DEFAULT_PROVIDER_EMBEDDING
+
+    print(f"LLM Provider: {effective_llm_provider} (model: {llm_config.model})")
     print(f"Endpoint: {llm_config.base_url}")
     if embed_config:
-        print(f"Embed Provider: {args.provider_embedding} (model: {embed_config.model})")
+        print(f"Embed Provider: {effective_embed_provider} (model: {embed_config.model})")
         print(f"Embed Endpoint: {embed_config.base_url}")
     print(f"Cache: {'enabled' if args.cache else 'disabled'}")
     print(f"Input: {args.text}")
@@ -138,6 +147,20 @@ def main() -> None:
         f"  {name:20s} {info}" for name, info in EMBEDDING_MODELS.items()
     )
 
+    epilog_text = (
+        f"LLM providers:\n{llm_list}\n\n"
+        f"Embedding providers:\n{embed_list}\n\n"
+        f"LLM models:\n{model_list}\n\n"
+        f"Embedding models:\n{embed_model_list}\n\n"
+        f"Defaults: --provider-llm={DEFAULT_PROVIDER_LLM} --model-llm={DEFAULT_MODEL_LLM} "
+        f"--provider-embedding={DEFAULT_PROVIDER_EMBEDDING} --model-embedding={DEFAULT_MODEL_EMBEDDING}\n\n"
+        "Examples:\n"
+        '  coordination-patterns extract "Find the Q1 sales report"\n'
+        '  coordination-patterns extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b\n'
+        '  coordination-patterns extract "Find the Q1 sales report" --cache\n'
+        '  coordination-patterns extract "Find the Q1 sales report" --cache --model-embedding nomic-embed-text\n'
+    )
+
     parser = argparse.ArgumentParser(
         prog="coordination-patterns",
         description=(
@@ -145,15 +168,7 @@ def main() -> None:
             "semantic intent extraction and agent routing."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            f"LLM providers:\n{llm_list}\n\n"
-            f"Embedding providers:\n{embed_list}\n\n"
-            f"LLM models:\n{model_list}\n\n"
-            f"Embedding models:\n{embed_model_list}\n\n"
-            "Examples:\n"
-            '  coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local\n'
-            '  coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local --provider-embedding ollama-local --cache\n'
-        ),
+        epilog=epilog_text,
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -175,30 +190,28 @@ def main() -> None:
     )
     extract_parser.add_argument(
         "--provider-llm",
-        choices=list(LLM_PROVIDER_OPTIONS.keys()),
-        required=True,
-        help="LLM provider for intent extraction (required)",
+        default=None,
+        help=f"LLM provider (default: {DEFAULT_PROVIDER_LLM})",
     )
     extract_parser.add_argument(
         "--provider-embedding",
-        choices=list(EMBEDDING_PROVIDER_OPTIONS.keys()),
         default=None,
-        help="Embedding provider for semantic cache (required with --cache)",
+        help=f"Embedding provider for semantic cache (default: {DEFAULT_PROVIDER_EMBEDDING})",
     )
     extract_parser.add_argument(
-        "--model",
+        "--model-llm",
         default=None,
-        help="LLM model (default: qwen3.5:2b)",
+        help=f"LLM model (default: {DEFAULT_MODEL_LLM})",
     )
     extract_parser.add_argument(
-        "--embed-model",
+        "--model-embedding",
         default=None,
-        help="Embedding model (default: nomic-embed-text)",
+        help=f"Embedding model (default: {DEFAULT_MODEL_EMBEDDING})",
     )
     extract_parser.add_argument(
         "--host",
         default=None,
-        help="Override host (default: localhost)",
+        help=f"Override host (default: {DEFAULT_HOST})",
     )
     extract_parser.add_argument(
         "--cache",

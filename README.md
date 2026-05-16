@@ -20,13 +20,19 @@ Proven patterns included: capability graphs, semantic intent extraction, agent r
 # Install all dependencies
 uv sync --all-extras
 
-# Extract intent (no cache)
-uv run coordination-patterns extract "Find the Q1 sales report" --provider-llm <provider>
+# Extract intent (uses defaults — no flags needed)
+uv run coordination-patterns extract "Find the Q1 sales report"
 
-# Extract intent with semantic cache
+# Override the LLM model
+uv run coordination-patterns extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
+
+# Enable semantic cache (uses defaults for both providers)
+uv run coordination-patterns extract "Find the Q1 sales report" --cache
+
+# Full customization
 uv run coordination-patterns extract "Find the Q1 sales report" \
-  --provider-llm <provider> \
-  --provider-embedding <provider> \
+  --provider-llm ollama-local --model-llm qwen3.5:2b \
+  --provider-embedding ollama-local --model-embedding nomic-embed-text \
   --cache
 
 # Run tests
@@ -35,14 +41,20 @@ uv run pytest tests-integration/ -v          # Integration tests (hits real LLM)
 uv run pytest tests-integration/ --ignore=tests-integration/test_cache_speed.py  # Skip cache tests (needs embed model)
 ```
 
-## Two Providers
+## CLI Options
 
-This system uses two independent providers:
+All options are optional. Sensible defaults are applied:
 
-- **`--provider-llm`** — chat model for intent extraction (e.g., `qwen3.5:0.8b`)
-- **`--provider-embedding`** — embedding model for semantic cache (e.g., `nomic-embed-text`)
+| Option | Default | Description |
+|---|---|---|
+| `--provider-llm` | `ollama-local` | LLM provider for intent extraction |
+| `--model-llm` | `qwen3.5:2b` | Model name for the LLM provider |
+| `--provider-embedding` | `ollama-local` | Embedding provider for semantic cache |
+| `--model-embedding` | `nomic-embed-text` | Model name for the embedding provider |
+| `--host` | `localhost` | Override host for all providers |
+| `--cache` | `false` | Enable semantic intent cache |
 
-The embedding provider is only needed when `--cache` is enabled.
+The embedding provider and model are only used when `--cache` is enabled.
 
 ## Patterns
 
