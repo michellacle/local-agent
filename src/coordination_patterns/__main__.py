@@ -82,7 +82,7 @@ def main():
             f"Available providers:\n{provider_list}\n\n"
             f"Available models:\n{model_list}\n\n"
             "Examples:\n"
-            '  coordination-patterns extract "Find the Q1 sales report"\n'
+            '  coordination-patterns extract "Find the Q1 sales report" --provider ollama-local\n'
             '  coordination-patterns extract "Analyze server logs" --provider ollama-local --model qwen3.5:2b\n'
             '  coordination-patterns extract "Find sales report" --provider ollama-local --model qwen3.5:0.8b\n'
         ),
@@ -109,8 +109,8 @@ def main():
     extract_parser.add_argument(
         "--provider",
         choices=list(PROVIDER_OPTIONS.keys()),
-        default="ollama-local",
-        help="LLM provider to use (default: ollama-local)",
+        required=True,
+        help="LLM provider to use (required)",
     )
     extract_parser.add_argument(
         "--model",
