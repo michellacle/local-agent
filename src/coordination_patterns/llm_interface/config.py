@@ -23,7 +23,7 @@ class LLMConfig:
         )
     )
     model: str = field(
-        default_factory=lambda: os.getenv("LLM_MODEL", "llama3.2")
+        default_factory=lambda: os.getenv("LLM_MODEL", "qwen3.5:2b")
     )
     api_key: str = field(
         default_factory=lambda: os.getenv("LLM_API_KEY", "not-needed")
@@ -35,7 +35,7 @@ class LLMConfig:
     timeout: int = 30  # seconds
 
     @classmethod
-    def ollama(cls, host: str = "localhost", model: str = "llama3.2") -> LLMConfig:
+    def ollama(cls, host: str = "localhost", model: str = "qwen3.5:2b") -> LLMConfig:
         """Local Ollama instance."""
         return cls(
             provider="openai_compat",

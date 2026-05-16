@@ -11,9 +11,9 @@ def test_config_defaults():
 
 
 def test_config_ollama():
-    config = LLMConfig.ollama(model="llama3.2")
+    config = LLMConfig.ollama(model="qwen3.5:2b")
     assert config.base_url == "http://localhost:11434/v1"
-    assert config.model == "llama3.2"
+    assert config.model == "qwen3.5:2b"
 
 
 def test_config_ollama_custom_host():

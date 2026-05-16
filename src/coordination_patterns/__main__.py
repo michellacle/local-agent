@@ -2,7 +2,7 @@
 
 Usage:
     coordination-patterns extract "Find the Q1 sales report"
-    coordination-patterns extract "Analyze the server logs" --model llama3.2
+    coordination-patterns extract "Analyze the server logs" --model qwen3.5:2b
     coordination-patterns extract "Find the sales report" --host minadioro --model qwen2.5
     coordination-patterns --help
 """
@@ -53,8 +53,8 @@ def main():
             "Provider: ollama-local (OpenAI-compatible)\n\n"
             "Examples:\n"
             '  coordination-patterns extract "Find the Q1 sales report"\n'
-            '  coordination-patterns extract "Analyze server logs" --model llama3.2\n'
-            '  coordination-patterns extract "Find sales report" --host minadioro --model qwen2.5\n'
+            '  coordination-patterns extract "Analyze server logs" --model qwen3.5:2b\n'
+            '  coordination-patterns extract "Find sales report" --host minadioro --model qwen3.5:2b\n'
         ),
     )
 
@@ -78,7 +78,7 @@ def main():
     extract_parser.add_argument(
         "--model",
         default=None,
-        help="Override the model name (default: llama3.2)",
+        help="Override the model name (default: qwen3.5:2b)",
     )
     extract_parser.add_argument(
         "--host",
