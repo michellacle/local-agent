@@ -2,8 +2,8 @@
 
 Usage:
     coordination-patterns extract "Find the Q1 sales report"
-    coordination-patterns extract "Analyze the server logs" --provider ollama-local
-    coordination-patterns extract "Find the sales report" --provider ollama-local --model llama3.2
+    coordination-patterns extract "Analyze the server logs" --model llama3.2
+    coordination-patterns extract "Find the sales report" --host minadioro --model qwen2.5
     coordination-patterns --help
 """
 
@@ -16,37 +16,9 @@ from coordination_patterns.llm_interface.config import LLMConfig
 from coordination_patterns.intent_extractor.extractor import IntentExtractor
 
 
-# Available providers
-PROVIDER_OPTIONS = {
-    "cacique": {
-        "label": "cacique",
-        "help": "Cacique server (papia.tailde85bf.ts.net:8880) — default",
-    },
-    "ollama-local": {
-        "label": "ollama-local",
-        "help": "Local Ollama instance (localhost:11434)",
-    },
-    "openai": {
-        "label": "openai",
-        "help": "OpenAI API (requires OPENAI_API_KEY env var)",
-    },
-}
-
-
-def build_config(provider: str, model: str | None, host: str | None) -> LLMConfig:
+def build_config(model: str | None, host: str | None) -> LLMConfig:
     """Build LLMConfig from CLI args."""
-    if provider == "cacique":
-        cfg = LLMConfig.cacique()
-    elif provider == "ollama-local":
-        host = host or "localhost"
-        cfg = LLMConfig.ollama(host=host)
-    elif provider == "openai":
-        cfg = LLMConfig.openai()
-    else:
-        print(f"Error: Unknown provider '{provider}'.", file=sys.stderr)
-        print(f"Available: {', '.join(PROVIDER_OPTIONS.keys())}", file=sys.stderr)
-        sys.exit(1)
-
+    cfg = LLMConfig.ollama(host=host or "localhost")
     if model:
         cfg.model = model
     return cfg
@@ -54,10 +26,9 @@ def build_config(provider: str, model: str | None, host: str | None) -> LLMConfi
 
 def cmd_extract(args: argparse.Namespace) -> None:
     """Run the semantic intent extractor on user input."""
-    config = build_config(args.provider, args.model, args.host)
+    config = build_config(args.model, args.host)
 
-    print(f"Provider: {args.provider} (model: {config.model})")
-    print(f"Endpoint: {config.base_url}")
+    print(f"Provider: ollama-local (model: {config.model}, host: {config.base_url})")
     print(f"Input: {args.text}")
     print("---")
 
@@ -71,10 +42,6 @@ def cmd_extract(args: argparse.Namespace) -> None:
 
 
 def main():
-    provider_list = "\n".join(
-        f"  {name:10s} {info['help']}" for name, info in PROVIDER_OPTIONS.items()
-    )
-
     parser = argparse.ArgumentParser(
         prog="coordination-patterns",
         description=(
@@ -83,11 +50,11 @@ def main():
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
-            f"Available providers:\n{provider_list}\n\n"
+            "Provider: ollama-local (OpenAI-compatible)\n\n"
             "Examples:\n"
             '  coordination-patterns extract "Find the Q1 sales report"\n'
-            '  coordination-patterns extract "Analyze server logs" --provider ollama-local\n'
-            '  coordination-patterns extract "Find sales report" --provider ollama-local --model llama3.2\n'
+            '  coordination-patterns extract "Analyze server logs" --model llama3.2\n'
+            '  coordination-patterns extract "Find sales report" --host minadioro --model qwen2.5\n'
         ),
     )
 
@@ -102,7 +69,6 @@ def main():
             "RoutingIntent → AgentRouter → Agent"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"Available providers:\n{provider_list}",
     )
 
     extract_parser.add_argument(
@@ -110,20 +76,14 @@ def main():
         help="Natural language input text",
     )
     extract_parser.add_argument(
-        "--provider",
-        choices=list(PROVIDER_OPTIONS.keys()),
-        default="cacique",
-        help="LLM provider to use (default: cacique)",
-    )
-    extract_parser.add_argument(
         "--model",
         default=None,
-        help="Override the model name (default depends on --provider)",
+        help="Override the model name (default: llama3.2)",
     )
     extract_parser.add_argument(
         "--host",
         default=None,
-        help="Override host (used with --provider ollama or cacique)",
+        help="Override Ollama host (default: localhost:11434)",
     )
 
     args = parser.parse_args()

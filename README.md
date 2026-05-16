@@ -38,9 +38,7 @@ Talk to any OpenAI-compatible LLM without hardcoding endpoints.
 from coordination_patterns import LLMClient, LLMConfig
 
 # Swap backends by changing config:
-client = LLMClient(LLMConfig.cacique())   # Cacique server
 client = LLMClient(LLMConfig.ollama())     # Local Ollama
-client = LLMClient(LLMConfig.openai())     # OpenAI API
 
 response = client.chat(messages=[{"role": "user", "content": "Hello"}])
 ```
@@ -51,7 +49,7 @@ Natural language → LLM extracts structured intent → route to agent.
 ```python
 from coordination_patterns import IntentExtractor, LLMConfig
 
-with IntentExtractor(LLMConfig.cacique()) as extractor:
+with IntentExtractor(LLMConfig.ollama()) as extractor:
     result = extractor.process("Find the Q1 sales report")
     # Internally:
     # 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
