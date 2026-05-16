@@ -1,8 +1,8 @@
-"""Persistence backends for the semantic cache.
+"""Persistent cache stores for the semantic cache.
 
-Two store implementations are provided:
-- MemoryCacheStore: in-memory (default, matches prior behavior)
-- SqliteCacheStore: SQLite-backed with WAL mode for durability
+Two backends:
+- MemoryCacheStore — in-memory (current behaviour, no persistence)
+- SqliteCacheStore — SQLite-backed file cache (survives process restart)
 """
 
 from __future__ import annotations
@@ -10,217 +10,142 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
-import time
 from abc import ABC, abstractmethod
 from typing import Any
 
 from coordination_patterns.capability_router.pattern import RoutingIntent
 
 
-# ---------------------------------------------------------------------------
-# Internal data carrier (kept out of the public API to avoid coupling to
-# Pydantic in the persistence layer).
-# ---------------------------------------------------------------------------
-
-class _Row:
-    """Internal representation of a cache row used by stores."""
-
-    __slots__ = ("query", "embedding", "intent_dict", "created_at", "hit_count")
-
-    def __init__(
-        self,
-        query: str,
-        embedding: list[float],
-        intent_dict: dict[str, Any],
-        created_at: float | None = None,
-        hit_count: int = 0,
-    ) -> None:
-        self.query = query
-        self.embedding = embedding
-        self.intent_dict = intent_dict
-        self.created_at = created_at if created_at is not None else time.time()
-        self.hit_count = hit_count
-
-    def to_intent(self) -> RoutingIntent:
-        return RoutingIntent(**self.intent_dict)
-
-
-# ---------------------------------------------------------------------------
-# Protocol
-# ---------------------------------------------------------------------------
-
-class CacheStoreProtocol(ABC):
-    """Abstract interface for semantic-cache persistence back-ends."""
+class CacheStore(ABC):
+    """Abstract persistence layer for semantic cache entries."""
 
     @abstractmethod
-    def get_all(self) -> list[_Row]:
-        """Return every stored row."""
+    def get_all(self) -> list[tuple[str, list[float], RoutingIntent, float, int]]:
+        """Return all entries as (query, embedding, intent, created_at, hit_count)."""
 
     @abstractmethod
-    def put(self, row: _Row) -> None:
-        """Append a new row."""
-
-    @abstractmethod
-    def increment_hit(self, embedding: list[float]) -> None:
-        """Increment hit_count for the row whose embedding matches."""
-
-    @abstractmethod
-    def evict_lowest(self) -> None:
-        """Remove the row with the lowest hit_count."""
+    def add(self, query: str, embedding: list[float], intent: RoutingIntent) -> None:
+        """Insert a new entry."""
 
     @abstractmethod
     def clear(self) -> None:
-        """Remove all rows."""
+        """Remove all entries."""
 
     @abstractmethod
+    def update_hit(self, query: str, new_hit_count: int) -> None:
+        """Update the hit_count for a given query."""
+
+    @abstractmethod
+    def evict(self, keep_n: int) -> None:
+        """Keep only the keep_n entries with the highest hit_count."""
+
     def close(self) -> None:
-        """Release resources (connections, files, …)."""
+        """Release any underlying resources. Default no-op."""
 
 
-# ---------------------------------------------------------------------------
-# Memory back-end
-# ---------------------------------------------------------------------------
-
-class MemoryCacheStore(CacheStoreProtocol):
-    """In-memory cache store (original behavior)."""
+class MemoryCacheStore(CacheStore):
+    """In-memory list-backed store."""
 
     def __init__(self) -> None:
-        self._rows: list[_Row] = []
+        self._entries: list[tuple[str, list[float], RoutingIntent, float, int]] = []
 
-    def get_all(self) -> list[_Row]:
-        return list(self._rows)
+    def get_all(self) -> list[tuple[str, list[float], RoutingIntent, float, int]]:
+        return list(self._entries)
 
-    def put(self, row: _Row) -> None:
-        self._rows.append(row)
+    def add(self, query: str, embedding: list[float], intent: RoutingIntent) -> None:
+        import time
 
-    def increment_hit(self, embedding: list[float]) -> None:
-        for row in self._rows:
-            if row.embedding == embedding:
-                row.hit_count += 1
-                return
-
-    def evict_lowest(self) -> None:
-        if self._rows:
-            min_idx = min(range(len(self._rows)), key=lambda i: self._rows[i].hit_count)
-            self._rows.pop(min_idx)
+        self._entries.append((query, embedding, intent, time.time(), 0))
 
     def clear(self) -> None:
-        self._rows.clear()
+        self._entries.clear()
 
-    def close(self) -> None:
-        pass
+    def update_hit(self, query: str, new_hit_count: int) -> None:
+        for i, (q, emb, intent, created, hits) in enumerate(self._entries):
+            if q == query:
+                self._entries[i] = (q, emb, intent, created, new_hit_count)
+                break
+
+    def evict(self, keep_n: int) -> None:
+        self._entries.sort(key=lambda e: e[4])
+        if len(self._entries) > keep_n:
+            self._entries = self._entries[-keep_n:]
 
 
-# ---------------------------------------------------------------------------
-# SQLite back-end
-# ---------------------------------------------------------------------------
+class SqliteCacheStore(CacheStore):
+    """SQLite-backed store with WAL mode for persistence."""
 
-class SqliteCacheStore(CacheStoreProtocol):
-    """SQLite-backed cache store using WAL mode for durability.
-
-    Schema
-    ------
-    cache_entries (
-        rowid       INTEGER PRIMARY KEY AUTOINCREMENT,
-        query       TEXT NOT NULL,
-        embedding   TEXT NOT NULL,   -- JSON array of floats
-        intent      TEXT NOT NULL,   -- JSON object (action, resource, parameters)
-        created_at  REAL NOT NULL,
-        hit_count   INTEGER NOT NULL DEFAULT 0
-    )
-    """
-
-    _DEFAULT_DIR = os.path.expanduser("~/.local/share/coordination-patterns")
-    _DEFAULT_DB = os.path.join(_DEFAULT_DIR, "cache.db")
-
-    def __init__(self, db_path: str | None = None) -> None:
-        self._db_path: str = db_path or SqliteCacheStore._DEFAULT_DB
-        self._conn: sqlite3.Connection | None = None
-        self._open()
-
-    # -- connection helpers ------------------------------------------------
-
-    def _open(self) -> None:
-        os.makedirs(os.path.dirname(self._db_path), exist_ok=True)
-        self._conn = sqlite3.connect(self._db_path)
+    def __init__(self, db_path: str) -> None:
+        self._db_path = db_path
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        self._conn = sqlite3.connect(db_path)
         self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
+        self._init_db()
+
+    def _init_db(self) -> None:
         self._conn.execute(
             """
             CREATE TABLE IF NOT EXISTS cache_entries (
-                rowid       INTEGER PRIMARY KEY AUTOINCREMENT,
-                query       TEXT    NOT NULL,
-                embedding   TEXT    NOT NULL,
-                intent      TEXT    NOT NULL,
-                created_at  REAL    NOT NULL,
+                query       TEXT PRIMARY KEY,
+                embedding   TEXT NOT NULL,
+                intent      TEXT NOT NULL,
+                created_at  REAL NOT NULL,
                 hit_count   INTEGER NOT NULL DEFAULT 0
             )
             """
         )
         self._conn.commit()
 
-    def _ensure(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._open()
-        assert self._conn is not None
-        return self._conn
+    def _row_to_tuple(
+        self, row: tuple[str, str, str, float, int]
+    ) -> tuple[str, list[float], RoutingIntent, float, int]:
+        query, emb_json, intent_json, created_at, hit_count = row
+        embedding = json.loads(emb_json)
+        intent_data = json.loads(intent_json)
+        intent = RoutingIntent(**intent_data)
+        return query, embedding, intent, created_at, hit_count
 
-    # -- protocol ---------------------------------------------------------
+    def get_all(self) -> list[tuple[str, list[float], RoutingIntent, float, int]]:
+        cursor = self._conn.execute("SELECT query, embedding, intent, created_at, hit_count FROM cache_entries")
+        return [self._row_to_tuple(r) for r in cursor.fetchall()]
 
-    def get_all(self) -> list[_Row]:
-        cur = self._ensure().cursor()
-        cur.execute(
-            "SELECT query, embedding, intent, created_at, hit_count "
-            "FROM cache_entries ORDER BY hit_count DESC"
+    def add(self, query: str, embedding: list[float], intent: RoutingIntent) -> None:
+        import time
+
+        emb_json = json.dumps(embedding)
+        intent_json = json.dumps(intent.model_dump())
+        self._conn.execute(
+            """
+            INSERT OR REPLACE INTO cache_entries (query, embedding, intent, created_at, hit_count)
+            VALUES (?, ?, ?, ?, 0)
+            """,
+            (query, emb_json, intent_json, time.time()),
         )
-        rows: list[_Row] = []
-        for q, emb, intent, ts, hc in cur.fetchall():
-            rows.append(
-                _Row(
-                    query=q,
-                    embedding=json.loads(emb),
-                    intent_dict=json.loads(intent),
-                    created_at=ts,
-                    hit_count=hc,
-                )
-            )
-        return rows
-
-    def put(self, row: _Row) -> None:
-        self._ensure().execute(
-            "INSERT INTO cache_entries (query, embedding, intent, created_at, hit_count) "
-            "VALUES (?, ?, ?, ?, ?)",
-            (
-                row.query,
-                json.dumps(row.embedding),
-                json.dumps(row.intent_dict),
-                row.created_at,
-                row.hit_count,
-            ),
-        )
-        self._ensure().commit()
-
-    def increment_hit(self, embedding: list[float]) -> None:
-        self._ensure().execute(
-            "UPDATE cache_entries SET hit_count = hit_count + 1 "
-            "WHERE embedding = ?",
-            (json.dumps(embedding),),
-        )
-        self._ensure().commit()
-
-    def evict_lowest(self) -> None:
-        self._ensure().execute(
-            "DELETE FROM cache_entries WHERE rowid = ("
-            "  SELECT rowid FROM cache_entries ORDER BY hit_count ASC LIMIT 1"
-            ")"
-        )
-        self._ensure().commit()
+        self._conn.commit()
 
     def clear(self) -> None:
-        self._ensure().execute("DELETE FROM cache_entries")
-        self._ensure().commit()
+        self._conn.execute("DELETE FROM cache_entries")
+        self._conn.commit()
+
+    def update_hit(self, query: str, new_hit_count: int) -> None:
+        self._conn.execute(
+            "UPDATE cache_entries SET hit_count = ? WHERE query = ?",
+            (new_hit_count, query),
+        )
+        self._conn.commit()
+
+    def evict(self, keep_n: int) -> None:
+        self._conn.execute(
+            """
+            DELETE FROM cache_entries
+            WHERE query NOT IN (
+                SELECT query FROM cache_entries ORDER BY hit_count DESC LIMIT ?
+            )
+            """,
+            (keep_n,),
+        )
+        self._conn.commit()
 
     def close(self) -> None:
-        if self._conn is not None:
+        if self._conn:
             self._conn.close()
-            self._conn = None

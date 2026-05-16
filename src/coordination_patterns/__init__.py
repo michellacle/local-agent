@@ -14,7 +14,7 @@ from coordination_patterns.semantic_cache import (
     SemanticCache,
 )
 from coordination_patterns.semantic_cache.store import (
-    CacheStoreProtocol,
+    CacheStore,
     MemoryCacheStore,
     SqliteCacheStore,
 )
@@ -29,7 +29,7 @@ __all__: list[str] = [
     "CachedEntry",
     "EmbeddingConfig",
     "EmbeddingClient",
-    "CacheStoreProtocol",
+    "CacheStore",
     "MemoryCacheStore",
     "SqliteCacheStore",
 ]
