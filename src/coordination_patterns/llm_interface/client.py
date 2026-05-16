@@ -46,16 +46,14 @@ class LLMClient:
         if system_prompt:
             msg_list.insert(0, {"role": "system", "content": system_prompt})
 
-        payload: dict[str, Any] = {
-            "model": self.config.model,
-            "messages": msg_list,
-            "temperature": self.config.temperature,
-            "max_tokens": self.config.max_tokens,
-            **extra,
-        }
+        payload: dict[str, Any] = self.config.prepare()
+        payload["messages"] = msg_list
 
         if response_format:
             payload["response_format"] = response_format
+
+        if extra:
+            payload.update(extra)
 
         url = f"{self.config.base_url}/chat/completions"
         headers = {

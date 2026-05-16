@@ -34,12 +34,40 @@ class LLMConfig:
     max_tokens: int = 2048
     timeout: int = 30  # seconds
 
+    # Deterministic mode: lock seed + temperature for reproducible outputs.
+    # When True, forces temperature=0.0 and sends seed=0 to the backend.
+    # Intended for integration testing only — ensures the same input always
+    # produces the same output, preventing flaky test failures.
+    deterministic: bool = False
+
     @classmethod
-    def ollama(cls, host: str = "localhost", model: str = "qwen3.5:2b") -> LLMConfig:
+    def ollama(
+        cls,
+        host: str = "localhost",
+        model: str = "qwen3.5:2b",
+        deterministic: bool = False,
+    ) -> LLMConfig:
         """Local Ollama instance."""
         return cls(
             provider="openai_compat",
             base_url=f"http://{host}:11434/v1",
             model=model,
             api_key="not-needed",
+            deterministic=deterministic,
         )
+
+    def prepare(self) -> dict:
+        """Build the base payload shared by chat/structured_chat.
+
+        If deterministic mode is enabled, forces temperature=0.0 and
+        attaches seed=0 so the backend produces identical output for
+        the same input every time.
+        """
+        payload = {
+            "model": self.model,
+            "temperature": 0.0 if self.deterministic else self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+        if self.deterministic:
+            payload["seed"] = 0
+        return payload
