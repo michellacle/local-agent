@@ -1,6 +1,18 @@
 # Local Agent
 
-Proven patterns for coordinating multiple AI agents — capability graphs, semantic intent extraction, agent routing, and caching.
+**100% local AI agent coordination — no third-party APIs, no cloud dependencies.**
+
+Local Agent provides proven patterns for coordinating multiple AI agents using
+only locally hosted models (via [Ollama](https://ollama.com)). Everything runs
+on your machine — intent extraction, semantic caching, agent routing, and
+dispatch. No data ever leaves your network.
+
+Built for privacy-focused use cases where your data stays yours.
+
+**Current:** Python prototype using `uv`  
+**Long-term goal:** Reimplement in Rust for performance and zero-cost abstractions
+
+Proven patterns included: capability graphs, semantic intent extraction, agent routing, and caching.
 
 ## Quick Start
 
@@ -176,7 +188,7 @@ coordination-patterns/
     └── conftest.py              # Session-scoped fixtures
 ```
 
-Built as a proper Python package using [uv](https://github.com/astral-sh/uv).
+Built as a proper Python package using [uv](https://github.com/astral-sh/uv). Currently in Python as a prototype — the long-term goal is a Rust rewrite for performance and zero-cost abstractions.
 
 ## Quick Start
 
