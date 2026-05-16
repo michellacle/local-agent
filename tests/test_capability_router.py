@@ -11,7 +11,7 @@ def test_route_known_action():
         parameters={"date_range": "Q1-2026"},
     )
     result = router.route_request(intent)
-    assert result == "Success"
+    assert result == "SalesAgent"
 
 
 def test_route_unknown_action():

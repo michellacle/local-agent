@@ -19,15 +19,16 @@ class TestCacheSpeedBenefit:
         """First call hits LLM (~1-5s), second call hits cache (<0.1s).
 
         We assert the second call is at least 10x faster than the first.
+        Using a unique query to avoid collision with other tests sharing this fixture.
         """
-        query = "Find the Q1 sales report"
+        query = "Analyze the quarterly sales report trends"
 
         # First call — cache miss, hits LLM
         t0 = time.time()
         result1 = cached_extractor.process(query)
         first_duration = time.time() - t0
 
-        assert result1 == "Success"
+        assert result1 == "SalesAgent"
         print(f"First call (LLM): {first_duration:.2f}s")
 
         # Second call — cache hit, should be instant
@@ -35,7 +36,7 @@ class TestCacheSpeedBenefit:
         result2 = cached_extractor.process(query)
         second_duration = time.time() - t1
 
-        assert result2 == "Success"
+        assert result2 == "SalesAgent"
         print(f"Second call (cache): {second_duration:.4f}s")
 
         # The cache hit should be dramatically faster
@@ -54,11 +55,11 @@ class TestCacheSpeedBenefit:
 
         # Warm the cache
         result1 = cached_extractor.process(query)
-        assert result1 == "Success"
+        assert result1 == "DevOpsAgent"
 
         # Repeat — should hit cache and return same result
         result2 = cached_extractor.process(query)
-        assert result2 == "Success"
+        assert result2 == "DevOpsAgent"
 
         # Verify cache has grown
         assert cached_extractor.cache.size >= 1

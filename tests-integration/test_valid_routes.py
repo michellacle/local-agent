@@ -15,7 +15,7 @@ class TestFindSalesReport:
 
     def test_find(self, integ_extractor):
         result = integ_extractor.process("Find the Q1 sales report")
-        assert result == "Success"
+        assert result == "SalesAgent"
 
 
 class TestAnalyzeSalesReport:
@@ -23,7 +23,7 @@ class TestAnalyzeSalesReport:
 
     def test_analyze(self, integ_extractor):
         result = integ_extractor.process("I want to analyze our sales report performance")
-        assert result == "Success"
+        assert result == "SalesAgent"
 
 
 class TestFindDocument:
@@ -31,7 +31,7 @@ class TestFindDocument:
 
     def test_find(self, integ_extractor):
         result = integ_extractor.process("I need to find the regulatory document")
-        assert result == "Success"
+        assert result == "ComplianceAgent"
 
 
 class TestCreateServerLog:
@@ -39,4 +39,4 @@ class TestCreateServerLog:
 
     def test_create(self, integ_extractor):
         result = integ_extractor.process("Create a server log entry for the deployment")
-        assert result == "Success"
+        assert result == "DevOpsAgent"

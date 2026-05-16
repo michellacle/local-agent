@@ -48,4 +48,4 @@ class AgentRouter:
 
     def dispatch_to_agent(self, agent_name: str, params: dict) -> str:
         print(f"Routing to {agent_name} with params: {params}")
-        return "Success"
+        return agent_name

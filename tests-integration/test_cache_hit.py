@@ -40,10 +40,10 @@ def test_cache_hit_is_faster(cached_extractor):
     assert "quarter" in intent1.parameters, "Expected 'quarter' in parameters"
     assert intent1.parameters["quarter"] == "Q1", f"Expected quarter 'Q1', got '{intent1.parameters['quarter']}'"
 
-    # Verify routing succeeded on both
+    # Verify routing succeeded and routed to the correct agent
     routed1 = cached_extractor.process(QUERY)
     routed2 = cached_extractor.process(QUERY)
-    assert not routed1.startswith("Error:"), f"Routing failed: {routed1}"
+    assert routed1 == "SalesAgent", f"Expected routing to SalesAgent, got '{routed1}'"
     assert routed1 == routed2
 
     # Second call should be significantly faster (at least 10x)
