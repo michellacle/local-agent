@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from coordination_patterns.llm_interface.config import EmbeddingConfig, LLMConfig
 from coordination_patterns.intent_extractor.extractor import IntentExtractor
@@ -22,6 +23,10 @@ DEFAULT_PROVIDER_EMBEDDING: str = "ollama-local"
 DEFAULT_MODEL_LLM: str = "qwen3.5:2b"
 DEFAULT_MODEL_EMBEDDING: str = "nomic-embed-text"
 DEFAULT_HOST: str = "localhost"
+DEFAULT_CACHE_STORE: str = "memory"
+DEFAULT_CACHE_PATH: str = str(
+    Path.home() / ".local" / "share" / "coordination-patterns" / "cache.db"
+)
 
 # Available LLM providers
 LLM_PROVIDER_OPTIONS: dict[str, dict[str, str]] = {
@@ -111,6 +116,9 @@ def cmd_extract(args: argparse.Namespace) -> None:
     print(f"Embed Provider: {effective_embed_provider} (model: {embed_config.model})")
     print(f"Embed Endpoint: {embed_config.base_url}")
     print(f"Cache: {'enabled' if args.cache else 'disabled'}")
+    if args.cache:
+        print(f"Cache Store: {args.cache_store}")
+        print(f"Cache Path: {args.cache_path}")
     print(f"Input: {args.text}")
     print("---")
 
@@ -119,6 +127,8 @@ def cmd_extract(args: argparse.Namespace) -> None:
             llm_config,
             embed_config=embed_config if args.cache else None,
             cache_enabled=args.cache,
+            cache_store=args.cache_store,
+            cache_store_path=args.cache_path if args.cache_store == "sqlite" else None,
         ) as extractor:
             result = extractor.process(args.text)
             print(f"\nResult: {result}")
@@ -155,6 +165,7 @@ def main() -> None:
         '  coordination-patterns extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b\n'
         '  coordination-patterns extract "Find the Q1 sales report" --cache\n'
         '  coordination-patterns extract "Find the Q1 sales report" --cache --model-embedding nomic-embed-text\n'
+        '  coordination-patterns extract "Find the Q1 sales report" --cache --cache-store sqlite\n'
     )
 
     parser = argparse.ArgumentParser(
@@ -214,6 +225,17 @@ def main() -> None:
         action="store_true",
         default=False,
         help="Enable semantic intent cache (bypass LLM for similar queries)",
+    )
+    extract_parser.add_argument(
+        "--cache-store",
+        default=DEFAULT_CACHE_STORE,
+        choices=["memory", "sqlite"],
+        help=f"Cache persistence backend (default: {DEFAULT_CACHE_STORE})",
+    )
+    extract_parser.add_argument(
+        "--cache-path",
+        default=DEFAULT_CACHE_PATH,
+        help=f"Path to SQLite cache database (default: {DEFAULT_CACHE_PATH})",
     )
 
     args = parser.parse_args()

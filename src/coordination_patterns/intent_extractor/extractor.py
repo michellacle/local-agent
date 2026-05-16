@@ -69,12 +69,21 @@ class IntentExtractor:
         config: LLMConfig | None = None,
         embed_config: EmbeddingConfig | None = None,
         cache_enabled: bool = False,
+        cache_store: str = "memory",
+        cache_store_path: str | None = None,
     ) -> None:
         self.client = LLMClient(config)
         self.embed_client = EmbeddingClient(embed_config) if cache_enabled else None
         self.router = AgentRouter()
         self.cache_enabled = cache_enabled
-        self.cache = SemanticCache() if cache_enabled else None
+        self.cache = (
+            SemanticCache(
+                store=cache_store,
+                store_path=cache_store_path,
+            )
+            if cache_enabled
+            else None
+        )
 
     def extract(self, user_input: str) -> RoutingIntent:
         """Extract a RoutingIntent from natural language.
@@ -153,6 +162,8 @@ class IntentExtractor:
         self.client.close()
         if self.embed_client:
             self.embed_client.close()
+        if self.cache:
+            self.cache.close()
 
     def __enter__(self) -> IntentExtractor:
         return self

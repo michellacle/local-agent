@@ -53,8 +53,11 @@ All options are optional. Sensible defaults are applied:
 | `--model-embedding` | `nomic-embed-text` | Model name for the embedding provider |
 | `--host` | `localhost` | Override host for all providers |
 | `--cache` | `false` | Enable semantic intent cache |
+| `--cache-store` | `memory` | Cache persistence backend (`memory` or `sqlite`) |
+| `--cache-path` | `~/.local/share/coordination-patterns/cache.db` | Path to SQLite cache database |
 
 The embedding provider and model are only used when `--cache` is enabled.
+When `--cache-store sqlite` is used, cached entries persist across restarts.
 
 ## Patterns
 
