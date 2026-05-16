@@ -14,7 +14,8 @@ uv sync --all-extras
 uv run coordination-patterns
 
 # Run tests
-uv run pytest -v
+uv run pytest tests/ -v              # Unit tests (fast, no network)
+uv run pytest tests-integration/ -v  # Integration tests (hits real LLM)
 ```
 
 ## Patterns
@@ -105,7 +106,9 @@ coordination-patterns/
 │   │   └── client.py            # LLMClient (OpenAI-compatible)
 │   └── intent_extractor/        # Pattern #3
 │       └── extractor.py         # IntentExtractor (NL → route)
-└── tests/
+├── tests/                       # Unit tests (no network)
+└── tests-integration/           # Integration tests (hits real LLM)
+    └── conftest.py              # Session-scoped fixtures, deterministic mode
 ```
 
 ## uv Quick Reference
