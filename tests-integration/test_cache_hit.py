@@ -34,6 +34,18 @@ def test_cache_hit_is_faster(cached_extractor):
     assert intent2.resource == intent1.resource
     assert intent2.parameters == intent1.parameters
 
+    # Verify the extraction is actually correct for the input query
+    assert intent1.action == "find", f"Expected action 'find', got '{intent1.action}'"
+    assert intent1.resource == "sales_report", f"Expected resource 'sales_report', got '{intent1.resource}'"
+    assert "quarter" in intent1.parameters, "Expected 'quarter' in parameters"
+    assert intent1.parameters["quarter"] == "Q1", f"Expected quarter 'Q1', got '{intent1.parameters['quarter']}'"
+
+    # Verify routing succeeded on both
+    routed1 = cached_extractor.process(QUERY)
+    routed2 = cached_extractor.process(QUERY)
+    assert not routed1.startswith("Error:"), f"Routing failed: {routed1}"
+    assert routed1 == routed2
+
     # Second call should be significantly faster (at least 10x)
     # (realistic: first call ~1-3s, cache hit ~0.01s)
     assert second_elapsed < first_elapsed * 0.3, (
