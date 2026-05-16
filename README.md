@@ -1,4 +1,4 @@
-# Multi-Agent Coordination Patterns
+# Local Agent
 
 Proven patterns for coordinating multiple AI agents — capability graphs, intent routing, semantic extraction, and more.
 
