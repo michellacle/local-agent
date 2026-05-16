@@ -1,6 +1,148 @@
 # Local Agent
 
-Proven patterns for coordinating multiple AI agents — capability graphs, intent routing, semantic extraction, and more.
+Proven patterns for coordinating multiple AI agents — capability graphs, semantic intent extraction, agent routing, and caching.
+
+## Quick Start
+
+```bash
+# Install all dependencies
+uv sync --all-extras
+
+# Extract intent (no cache)
+uv run coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local
+
+# Extract intent with semantic cache
+uv run coordination-patterns extract "Find the Q1 sales report" \
+  --provider-llm ollama-local \
+  --provider-embedding ollama-local \
+  --cache
+
+# Run tests
+uv run pytest tests/ -v                      # Unit tests (fast, no network)
+uv run pytest tests-integration/ -v          # Integration tests (hits real LLM)
+uv run pytest tests-integration/ --ignore=tests-integration/test_cache_speed.py  # Skip cache tests (needs embed model)
+```
+
+## Two Providers
+
+This system uses two independent providers:
+
+- **`--provider-llm`** — chat model for intent extraction (e.g., `qwen3.5:0.8b`)
+- **`--provider-embedding`** — embedding model for semantic cache (e.g., `nomic-embed-text`)
+
+The embedding provider is only needed when `--cache` is enabled.
+
+## Patterns
+
+### 1. Capability Graph Router
+Route requests to specialized agents using `(action, resource)` → `agent` lookup.
+
+```python
+from coordination_patterns import AgentRouter, RoutingIntent
+
+router = AgentRouter()
+intent = RoutingIntent(action="find", resource="sales_report", parameters={"quarter": "Q1"})
+result = router.route_request(intent)
+# → "Routing to SalesAgent with params: {'quarter': 'Q1'}"
+```
+
+### 2. LLM Interface (Swappable Backends)
+Talk to any OpenAI-compatible LLM without hardcoding endpoints.
+
+```python
+from coordination_patterns import LLMClient, LLMConfig
+
+client = LLMClient(LLMConfig.ollama())     # Local Ollama
+response = client.chat(messages=[{"role": "user", "content": "Hello"}])
+```
+
+### 3. Semantic Intent Extraction (Full Pipeline)
+Natural language → LLM extracts structured intent → route to agent.
+
+```python
+from coordination_patterns import IntentExtractor, LLMConfig
+
+with IntentExtractor(LLMConfig.ollama()) as extractor:
+    result = extractor.process("Find the Q1 sales report")
+    # Internally:
+    # 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
+    # 2. Router dispatches to SalesAgent
+    # 3. Returns result
+```
+
+### 4. Semantic Intent Cache
+Bypass the LLM for previously seen (or similar) queries. Requires a separate embedding model.
+
+```python
+from coordination_patterns import IntentExtractor, LLMConfig, EmbeddingConfig
+
+with IntentExtractor(
+    LLMConfig.ollama(model="qwen3.5:0.8b"),
+    embed_config=EmbeddingConfig.ollama(model="nomic-embed-text"),
+    cache_enabled=True,
+) as extractor:
+    # First call — hits LLM (~2s)
+    extractor.process("Find the Q1 sales report")
+    # Second call — cache hit (~0.01s)
+    extractor.process("Find the Q1 sales report")
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   User Input (NL)                       │
+│            "Find the Q1 sales report"                   │
+└──────────────────────┬──────────────────────────────────┘
+                       ▼
+            ┌────────────────────┐
+            │  IntentExtractor   │
+            │  (Pattern #3)      │
+            └───────┬────────────┘
+                    │ cache enabled?
+           ┌────────┴────────┐
+           ▼                 ▼
+   ┌──────────────┐   ┌──────────────┐
+   │ Semantic     │   │    LLMClient │ ◄── LLMConfig
+   │ Cache (#4)   │   │  (Pattern #2)│     qwen3.5:0.8b
+   │ + Embedding  │   └──────┬───────┘
+   │   Client     │          │ structured intent
+   └──────┬───────┘          ▼
+          │ cache hit   ┌──────────────┐
+          └────────────>│    Agent     │
+                        │   Router     │
+                        │  (Pattern #1)│
+                        └──────┬───────┘
+                               │ dispatch
+                               ▼
+                        ┌──────────────┐
+                        │  Target      │
+                        │  Agent       │
+                        └──────────────┘
+```
+
+## Project Structure
+
+```
+coordination-patterns/
+├── pyproject.toml
+├── src/coordination_patterns/
+│   ├── __init__.py              # package exports
+│   ├── __main__.py              # CLI
+│   ├── capability_router/       # Pattern #1
+│   │   └── pattern.py
+│   ├── llm_interface/           # Pattern #2
+│   │   ├── config.py            # LLMConfig + EmbeddingConfig
+│   │   └── client.py            # LLMClient + EmbeddingClient
+│   ├── intent_extractor/        # Pattern #3
+│   │   └── extractor.py
+│   └── semantic_cache/          # Pattern #4
+│       ├── __init__.py          # SemanticCache + CachedEntry
+│       └── utils.py             # cosine_similarity
+├── tests/                       # Unit tests (no network)
+└── tests-integration/           # Integration tests (hits real LLM)
+    └── conftest.py              # Session-scoped fixtures
+```
 
 Built as a proper Python package using [uv](https://github.com/astral-sh/uv).
 

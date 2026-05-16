@@ -1,4 +1,9 @@
-"""LLM configuration."""
+"""LLM and embedding configuration.
+
+Two independent provider configs:
+- LLMConfig     — chat completions (intent extraction)
+- EmbeddingConfig — text embeddings (semantic cache)
+"""
 
 from __future__ import annotations
 
@@ -8,7 +13,7 @@ from dataclasses import dataclass, field
 
 @dataclass
 class LLMConfig:
-    """Configuration for an LLM backend.
+    """Configuration for an LLM chat backend.
 
     Targets local Ollama instances via the OpenAI-compatible API.
     """
@@ -49,7 +54,7 @@ class LLMConfig:
     ) -> LLMConfig:
         """Local Ollama instance."""
         return cls(
-            provider="openai_compat",
+            provider="ollama-local",
             base_url=f"http://{host}:11434/v1",
             model=model,
             api_key="not-needed",
@@ -71,3 +76,39 @@ class LLMConfig:
         if self.deterministic:
             payload["seed"] = 0
         return payload
+
+
+@dataclass
+class EmbeddingConfig:
+    """Configuration for an embedding backend.
+
+    Separate from LLMConfig — embeddings use a different model (e.g.,
+    nomic-embed-text) and may hit a different endpoint.
+    """
+
+    # Provider type
+    provider: str = "ollama-embedding"
+
+    # Ollama native endpoint (not /v1)
+    base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "EMBEDDING_BASE_URL", "http://localhost:11434"
+        )
+    )
+    model: str = field(
+        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "nomic-embed-text")
+    )
+    timeout: int = 30  # seconds
+
+    @classmethod
+    def ollama(
+        cls,
+        host: str = "localhost",
+        model: str = "nomic-embed-text",
+    ) -> EmbeddingConfig:
+        """Local Ollama embedding instance."""
+        return cls(
+            provider="ollama-embedding",
+            base_url=f"http://{host}:11434",
+            model=model,
+        )

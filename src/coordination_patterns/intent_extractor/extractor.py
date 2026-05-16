@@ -2,6 +2,9 @@
 
 Uses an LLM to extract structured intents (action + resource + parameters)
 from natural language user input, then feeds them to the AgentRouter.
+
+Optionally uses a semantic cache to bypass the LLM for previously seen (or
+similar) queries — reducing latency and cost.
 """
 
 from __future__ import annotations
@@ -12,8 +15,9 @@ from coordination_patterns.capability_router.pattern import (
     ResourceType,
     RoutingIntent,
 )
-from coordination_patterns.llm_interface.client import LLMClient
-from coordination_patterns.llm_interface.config import LLMConfig
+from coordination_patterns.llm_interface.client import EmbeddingClient, LLMClient
+from coordination_patterns.llm_interface.config import EmbeddingConfig, LLMConfig
+from coordination_patterns.semantic_cache import SemanticCache
 
 
 # JSON Schema for intent extraction
@@ -52,14 +56,29 @@ still extract the closest action and resource you can infer.
 
 
 class IntentExtractor:
-    """Extract structured intents from natural language using an LLM."""
+    """Extract structured intents from natural language using an LLM.
 
-    def __init__(self, config: LLMConfig | None = None):
+    Optionally caches intents semantically — on repeat or similar queries,
+    returns the cached intent immediately without calling the LLM.
+    """
+
+    def __init__(
+        self,
+        config: LLMConfig | None = None,
+        embed_config: EmbeddingConfig | None = None,
+        cache_enabled: bool = False,
+    ):
         self.client = LLMClient(config)
+        self.embed_client = EmbeddingClient(embed_config) if cache_enabled else None
         self.router = AgentRouter()
+        self.cache_enabled = cache_enabled
+        self.cache = SemanticCache() if cache_enabled else None
 
     def extract(self, user_input: str) -> RoutingIntent:
         """Extract a RoutingIntent from natural language.
+
+        If caching is enabled, checks the cache before calling the LLM.
+        Stores new extractions for future hits.
 
         Args:
             user_input: The user's natural language request.
@@ -67,6 +86,15 @@ class IntentExtractor:
         Returns:
             A RoutingIntent with action, resource, and parameters.
         """
+        # Cache lookup — bypass LLM if we have a close match
+        if self.cache_enabled and self.cache and self.embed_client:
+            embedding = self.embed_client.embed(user_input)
+            cached = self.cache.lookup(embedding)
+            if cached is not None:
+                print(f"Cache HIT (threshold {self.cache.threshold})")
+                return cached
+
+        # LLM extraction
         messages = [
             {
                 "role": "user",
@@ -88,13 +116,22 @@ class IntentExtractor:
                 system_prompt=SYSTEM_PROMPT,
             )
             import json
+
             result = json.loads(raw)
 
-        return RoutingIntent(
+        intent = RoutingIntent(
             action=result["action"],
             resource=result["resource"],
             parameters=result.get("parameters", {}),
         )
+
+        # Store in cache for future hits
+        if self.cache_enabled and self.cache and self.embed_client:
+            embedding = self.embed_client.embed(user_input)
+            self.cache.store(user_input, embedding, intent)
+            print("Cache MISS → stored for future hits")
+
+        return intent
 
     def process(self, user_input: str) -> str:
         """Full pipeline: extract intent → route → dispatch.
@@ -112,6 +149,8 @@ class IntentExtractor:
 
     def close(self) -> None:
         self.client.close()
+        if self.embed_client:
+            self.embed_client.close()
 
     def __enter__(self) -> IntentExtractor:
         return self

@@ -6,7 +6,7 @@ All tests here hit a real LLM endpoint (Ollama local) in deterministic mode
 
 import pytest
 
-from coordination_patterns.llm_interface.config import LLMConfig
+from coordination_patterns.llm_interface.config import EmbeddingConfig, LLMConfig
 
 
 def pytest_addoption(parser):
@@ -18,7 +18,12 @@ def pytest_addoption(parser):
     parser.addoption(
         "--integ-model",
         default="qwen3.5:0.8b",
-        help="Model for integration tests (default: qwen3.5:0.8b)",
+        help="LLM model for integration tests (default: qwen3.5:0.8b)",
+    )
+    parser.addoption(
+        "--integ-embed-model",
+        default="nomic-embed-text",
+        help="Embedding model for integration tests (default: nomic-embed-text)",
     )
 
 
@@ -31,10 +36,30 @@ def integ_config(request):
 
 
 @pytest.fixture(scope="session")
+def integ_embed_config(request):
+    """Session-level EmbeddingConfig for cached integration tests."""
+    host = request.config.getoption("--integ-host")
+    model = request.config.getoption("--integ-embed-model")
+    return EmbeddingConfig.ollama(host=host, model=model)
+
+
+@pytest.fixture(scope="session")
 def integ_extractor(integ_config):
-    """Session-level IntentExtractor that shares one client across all tests."""
+    """Session-level IntentExtractor without cache."""
     from coordination_patterns.intent_extractor.extractor import IntentExtractor
 
     extractor = IntentExtractor(integ_config)
+    yield extractor
+    extractor.close()
+
+
+@pytest.fixture(scope="session")
+def cached_extractor(integ_config, integ_embed_config):
+    """Session-level IntentExtractor with semantic cache enabled."""
+    from coordination_patterns.intent_extractor.extractor import IntentExtractor
+
+    extractor = IntentExtractor(
+        integ_config, embed_config=integ_embed_config, cache_enabled=True
+    )
     yield extractor
     extractor.close()
