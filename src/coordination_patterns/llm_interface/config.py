@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -61,7 +62,7 @@ class LLMConfig:
             deterministic=deterministic,
         )
 
-    def prepare(self) -> dict:
+    def prepare(self) -> dict[str, Any]:
         """Build the base payload shared by chat/structured_chat.
 
         If deterministic mode is enabled, forces temperature=0.0 and

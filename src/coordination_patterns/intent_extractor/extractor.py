@@ -9,6 +9,8 @@ similar) queries — reducing latency and cost.
 
 from __future__ import annotations
 
+from typing import Any
+
 from coordination_patterns.capability_router.pattern import (
     ActionType,
     AgentRouter,
@@ -21,7 +23,7 @@ from coordination_patterns.semantic_cache import SemanticCache
 
 
 # JSON Schema for intent extraction
-INTENT_SCHEMA: dict = {
+INTENT_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "action": {
@@ -42,7 +44,7 @@ INTENT_SCHEMA: dict = {
     "required": ["action", "resource"],
 }
 
-SYSTEM_PROMPT = """\
+SYSTEM_PROMPT: str = """\
 You are an intent extraction assistant.
 
 Given a natural language request, extract:
@@ -67,7 +69,7 @@ class IntentExtractor:
         config: LLMConfig | None = None,
         embed_config: EmbeddingConfig | None = None,
         cache_enabled: bool = False,
-    ):
+    ) -> None:
         self.client = LLMClient(config)
         self.embed_client = EmbeddingClient(embed_config) if cache_enabled else None
         self.router = AgentRouter()
@@ -155,5 +157,5 @@ class IntentExtractor:
     def __enter__(self) -> IntentExtractor:
         return self
 
-    def __exit__(self, *args) -> None:
+    def __exit__(self, *args: Any) -> None:
         self.close()

@@ -16,7 +16,7 @@ from coordination_patterns.intent_extractor.extractor import IntentExtractor
 
 
 # Available LLM providers
-LLM_PROVIDER_OPTIONS = {
+LLM_PROVIDER_OPTIONS: dict[str, dict[str, str]] = {
     "ollama-local": {
         "label": "ollama-local",
         "help": "Local Ollama instance (localhost:11434)",
@@ -24,7 +24,7 @@ LLM_PROVIDER_OPTIONS = {
 }
 
 # Available embedding providers
-EMBEDDING_PROVIDER_OPTIONS = {
+EMBEDDING_PROVIDER_OPTIONS: dict[str, dict[str, str]] = {
     "ollama-local": {
         "label": "ollama-local",
         "help": "Local Ollama instance (localhost:11434)",
@@ -32,13 +32,13 @@ EMBEDDING_PROVIDER_OPTIONS = {
 }
 
 # Available models
-LLM_MODELS = {
+LLM_MODELS: dict[str, str] = {
     "qwen3.5:2b": "Qwen 3.5 2B — default",
     "qwen3.5:0.8b": "Qwen 3.5 0.8B — small/fast (testing)",
 }
 
 # Available embedding models
-EMBEDDING_MODELS = {
+EMBEDDING_MODELS: dict[str, str] = {
     "nomic-embed-text": "Nomic Embed Text — semantic cache",
 }
 
@@ -122,7 +122,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
-def main():
+def main() -> None:
     llm_list = "\n".join(
         f"  {name:15s} {info['help']}"
         for name, info in LLM_PROVIDER_OPTIONS.items()

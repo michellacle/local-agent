@@ -24,7 +24,7 @@ class LLMClient:
         response = client.chat(messages=[...])
     """
 
-    def __init__(self, config: LLMConfig | None = None):
+    def __init__(self, config: LLMConfig | None = None) -> None:
         self.config = config or LLMConfig()
         self._http = httpx.Client(timeout=self.config.timeout)
 
@@ -32,7 +32,7 @@ class LLMClient:
         self,
         messages: list[dict[str, str]],
         system_prompt: str | None = None,
-        response_format: dict | None = None,
+        response_format: dict[str, Any] | None = None,
         **extra: Any,
     ) -> str:
         """Send a chat completion and return the assistant text."""
@@ -64,9 +64,9 @@ class LLMClient:
     def structured_chat(
         self,
         messages: list[dict[str, str]],
-        schema: dict,
+        schema: dict[str, Any],
         system_prompt: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send a chat completion expecting structured JSON output."""
         import json
 
@@ -107,7 +107,7 @@ class EmbeddingClient:
         vector = client.embed("hello world")
     """
 
-    def __init__(self, config: EmbeddingConfig | None = None):
+    def __init__(self, config: EmbeddingConfig | None = None) -> None:
         self.config = config or EmbeddingConfig()
         self._http = httpx.Client(timeout=self.config.timeout)
 

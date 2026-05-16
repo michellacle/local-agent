@@ -7,6 +7,10 @@ In a production environment, an LLM would extract structured intents from
 natural language input before passing them to this routing logic.
 """
 
+from __future__ import annotations
+
+from typing import Any
+
 from pydantic import BaseModel
 from typing import Literal
 
@@ -19,13 +23,13 @@ ResourceType = Literal["sales_report", "server_log", "document"]
 class RoutingIntent(BaseModel):
     action: ActionType
     resource: ResourceType
-    parameters: dict
+    parameters: dict[str, Any]
 
 
 class AgentRouter:
     """Route requests to specialized agents via a capability graph."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # The Capability Graph: Maps (Action, Resource) -> Agent Name
         self.capability_graph: dict[tuple[str, str], str] = {
             ("find", "sales_report"): "SalesAgent",
@@ -46,6 +50,6 @@ class AgentRouter:
 
         return self.dispatch_to_agent(target_agent_name, intent.parameters)
 
-    def dispatch_to_agent(self, agent_name: str, params: dict) -> str:
+    def dispatch_to_agent(self, agent_name: str, params: dict[str, Any]) -> str:
         print(f"Routing to {agent_name} with params: {params}")
         return agent_name

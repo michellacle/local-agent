@@ -21,12 +21,12 @@ Proven patterns included: capability graphs, semantic intent extraction, agent r
 uv sync --all-extras
 
 # Extract intent (no cache)
-uv run coordination-patterns extract "Find the Q1 sales report" --provider-llm ollama-local
+uv run coordination-patterns extract "Find the Q1 sales report" --provider-llm <provider>
 
 # Extract intent with semantic cache
 uv run coordination-patterns extract "Find the Q1 sales report" \
-  --provider-llm ollama-local \
-  --provider-embedding ollama-local \
+  --provider-llm <provider> \
+  --provider-embedding <provider> \
   --cache
 
 # Run tests
@@ -64,7 +64,7 @@ Talk to any OpenAI-compatible LLM without hardcoding endpoints.
 ```python
 from coordination_patterns import LLMClient, LLMConfig
 
-client = LLMClient(LLMConfig.ollama())     # Local Ollama
+client = LLMClient(LLMConfig())
 response = client.chat(messages=[{"role": "user", "content": "Hello"}])
 ```
 
@@ -74,7 +74,7 @@ Natural language → LLM extracts structured intent → route to agent.
 ```python
 from coordination_patterns import IntentExtractor, LLMConfig
 
-with IntentExtractor(LLMConfig.ollama()) as extractor:
+with IntentExtractor(LLMConfig()) as extractor:
     result = extractor.process("Find the Q1 sales report")
     # Internally:
     # 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
@@ -89,8 +89,8 @@ Bypass the LLM for previously seen (or similar) queries. Requires a separate emb
 from coordination_patterns import IntentExtractor, LLMConfig, EmbeddingConfig
 
 with IntentExtractor(
-    LLMConfig.ollama(model="qwen3.5:0.8b"),
-    embed_config=EmbeddingConfig.ollama(model="nomic-embed-text"),
+    LLMConfig(model="qwen3.5:0.8b"),
+    embed_config=EmbeddingConfig(model="nomic-embed-text"),
     cache_enabled=True,
 ) as extractor:
     # First call — hits LLM (~2s)
@@ -203,6 +203,14 @@ Built as a proper Python package using [uv](https://github.com/astral-sh/uv). Cu
 | `uv lock` | Regenerate the lockfile |
 | `uv build` | Build a wheel/sdist |
 | `uv publish` | Publish to PyPI |
+
+## Quality Standards
+
+- **Type annotations**: All functions, methods, and class attributes must have type annotations.
+- **Unit tests**: Every new feature requires unit tests in `tests/`.
+- **Integration tests**: Features involving external subsystems (LLM API calls, network requests, file I/O) require integration tests in `tests-integration/`.
+- **Future annotations**: Use `from __future__ import annotations` in all modules.
+- **Explicit types**: Use explicit types like `dict[str, Any]` instead of bare `dict`.
 
 ## Adding New Patterns
 

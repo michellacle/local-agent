@@ -1,5 +1,7 @@
 """Multi-agent coordination patterns."""
 
+from __future__ import annotations
+
 from coordination_patterns.capability_router.pattern import (
     AgentRouter,
     RoutingIntent,
@@ -12,7 +14,7 @@ from coordination_patterns.semantic_cache import (
     CachedEntry,
 )
 
-__all__ = [
+__all__: list[str] = [
     "AgentRouter",
     "RoutingIntent",
     "LLMConfig",
@@ -23,4 +25,4 @@ __all__ = [
     "EmbeddingConfig",
     "EmbeddingClient",
 ]
-__version__ = "0.1.0"
+__version__: str = "0.1.0"
