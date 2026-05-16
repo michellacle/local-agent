@@ -99,21 +99,17 @@ def build_embedding_config(
 def cmd_extract(args: argparse.Namespace) -> None:
     """Run the semantic intent extractor on user input."""
     llm_config = build_llm_config(args.provider_llm, args.model_llm, args.host)
-
-    embed_config = None
-    if args.cache:
-        embed_config = build_embedding_config(
-            args.provider_embedding, args.model_embedding, args.host
-        )
+    embed_config = build_embedding_config(
+        args.provider_embedding, args.model_embedding, args.host
+    )
 
     effective_llm_provider = args.provider_llm or DEFAULT_PROVIDER_LLM
     effective_embed_provider = args.provider_embedding or DEFAULT_PROVIDER_EMBEDDING
 
     print(f"LLM Provider: {effective_llm_provider} (model: {llm_config.model})")
     print(f"Endpoint: {llm_config.base_url}")
-    if embed_config:
-        print(f"Embed Provider: {effective_embed_provider} (model: {embed_config.model})")
-        print(f"Embed Endpoint: {embed_config.base_url}")
+    print(f"Embed Provider: {effective_embed_provider} (model: {embed_config.model})")
+    print(f"Embed Endpoint: {embed_config.base_url}")
     print(f"Cache: {'enabled' if args.cache else 'disabled'}")
     print(f"Input: {args.text}")
     print("---")
@@ -121,7 +117,7 @@ def cmd_extract(args: argparse.Namespace) -> None:
     try:
         with IntentExtractor(
             llm_config,
-            embed_config=embed_config,
+            embed_config=embed_config if args.cache else None,
             cache_enabled=args.cache,
         ) as extractor:
             result = extractor.process(args.text)
