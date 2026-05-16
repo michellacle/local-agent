@@ -24,6 +24,12 @@ PROVIDER_OPTIONS = {
     },
 }
 
+# Available models for ollama-local
+AVAILABLE_MODELS = {
+    "qwen3.5:2b": "Qwen 3.5 2B — default",
+    "qwen3.5:0.8b": "Qwen 3.5 0.8B — small/fast (testing)",
+}
+
 
 def build_config(provider: str, model: str | None, host: str | None) -> LLMConfig:
     """Build LLMConfig from CLI args."""
@@ -61,6 +67,9 @@ def main():
     provider_list = "\n".join(
         f"  {name:15s} {info['help']}" for name, info in PROVIDER_OPTIONS.items()
     )
+    model_list = "\n".join(
+        f"  {name:15s} {info}" for name, info in AVAILABLE_MODELS.items()
+    )
 
     parser = argparse.ArgumentParser(
         prog="coordination-patterns",
@@ -71,10 +80,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             f"Available providers:\n{provider_list}\n\n"
+            f"Available models:\n{model_list}\n\n"
             "Examples:\n"
             '  coordination-patterns extract "Find the Q1 sales report"\n'
             '  coordination-patterns extract "Analyze server logs" --provider ollama-local --model qwen3.5:2b\n'
-            '  coordination-patterns extract "Find sales report" --provider ollama-local --host minadioro\n'
+            '  coordination-patterns extract "Find sales report" --provider ollama-local --model qwen3.5:0.8b\n'
         ),
     )
 
@@ -89,7 +99,7 @@ def main():
             "RoutingIntent → AgentRouter → Agent"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"Available providers:\n{provider_list}",
+        epilog=f"Available providers:\n{provider_list}\n\nAvailable models:\n{model_list}",
     )
 
     extract_parser.add_argument(
