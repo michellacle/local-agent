@@ -3,9 +3,9 @@
 **100% local AI agent coordination — no third-party APIs, no cloud dependencies.**
 
 Local Agent provides proven patterns for coordinating multiple AI agents using
-only locally hosted models (via [Ollama](https://ollama.com)). Everything runs
-on your machine — intent extraction, semantic caching, agent routing, and
-dispatch. No data ever leaves your network.
+any locally hosted model that implements the OpenAI chat completions API.
+Everything runs on your machine — intent extraction, semantic caching, agent
+routing, and dispatch. No data ever leaves your network.
 
 Built for privacy-focused use cases where your data stays yours.
 
