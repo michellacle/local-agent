@@ -2,8 +2,8 @@
 
 Usage:
     coordination-patterns extract "Find the Q1 sales report"
-    coordination-patterns extract "Analyze the server logs" --provider ollama
-    coordination-patterns extract "Find the sales report" --provider ollama --model llama3.2
+    coordination-patterns extract "Analyze the server logs" --provider ollama-local
+    coordination-patterns extract "Find the sales report" --provider ollama-local --model llama3.2
     coordination-patterns --help
 """
 
@@ -22,8 +22,8 @@ PROVIDER_OPTIONS = {
         "label": "cacique",
         "help": "Cacique server (papia.tailde85bf.ts.net:8880) — default",
     },
-    "ollama": {
-        "label": "ollama",
+    "ollama-local": {
+        "label": "ollama-local",
         "help": "Local Ollama instance (localhost:11434)",
     },
     "openai": {
@@ -37,7 +37,7 @@ def build_config(provider: str, model: str | None, host: str | None) -> LLMConfi
     """Build LLMConfig from CLI args."""
     if provider == "cacique":
         cfg = LLMConfig.cacique()
-    elif provider == "ollama":
+    elif provider == "ollama-local":
         host = host or "localhost"
         cfg = LLMConfig.ollama(host=host)
     elif provider == "openai":
@@ -86,8 +86,8 @@ def main():
             f"Available providers:\n{provider_list}\n\n"
             "Examples:\n"
             '  coordination-patterns extract "Find the Q1 sales report"\n'
-            '  coordination-patterns extract "Analyze server logs" --provider ollama\n'
-            '  coordination-patterns extract "Find sales report" --provider ollama --model llama3.2\n'
+            '  coordination-patterns extract "Analyze server logs" --provider ollama-local\n'
+            '  coordination-patterns extract "Find sales report" --provider ollama-local --model llama3.2\n'
         ),
     )
 
