@@ -116,7 +116,7 @@ class EmbeddingClient:
         url = f"{self.config.base_url}/api/embeddings"
         payload = {
             "model": self.config.model,
-            "input": text,
+            "prompt": text,
         }
         headers = {"Content-Type": "application/json"}
 
