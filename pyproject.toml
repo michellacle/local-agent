@@ -1,0 +1,35 @@
+[project]
+name = "coordination-patterns"
+version = "0.1.0"
+description = "Multi-agent coordination patterns — capability graphs, intent routing, consensus, and more."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [
+    { name = "Michel", email = "michel@thinksmart.life" }
+]
+license = { text = "MIT" }
+
+dependencies = ["pydantic>=2.0"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff"]
+
+[project.scripts]
+coordination-patterns = "coordination_patterns.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/coordination_patterns"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,1 @@
+"""Capability Graph Router pattern."""
