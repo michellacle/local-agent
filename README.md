@@ -90,36 +90,68 @@ with IntentExtractor(
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   User Input (NL)                       │
-│            "Find the Q1 sales report"                   │
-└──────────────────────┬──────────────────────────────────┘
-                       ▼
-            ┌────────────────────┐
-            │  IntentExtractor   │
-            │  (Pattern #3)      │
-            └───────┬────────────┘
-                    │ cache enabled?
-           ┌────────┴────────┐
-           ▼                 ▼
-   ┌──────────────┐   ┌──────────────┐
-   │ Semantic     │   │    LLMClient │ ◄── LLMConfig
-   │ Cache (#4)   │   │  (Pattern #2)│     qwen3.5:0.8b
-   │ + Embedding  │   └──────┬───────┘
-   │   Client     │          │ structured intent
-   └──────┬───────┘          ▼
-          │ cache hit   ┌──────────────┐
-          └────────────>│    Agent     │
-                        │   Router     │
-                        │  (Pattern #1)│
-                        └──────┬───────┘
-                               │ dispatch
-                               ▼
-                        ┌──────────────┐
-                        │  Target      │
-                        │  Agent       │
-                        └──────────────┘
-```
+┌──────────────────────────────────────────────────────────────────────┐
+│                    User Input (Natural Language)                     │
+│                 "Find the Q1 sales report"                           │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                ▼
+                     ┌──────────────────────┐
+                     │   IntentExtractor    │
+                     │   (Pattern #3)       │
+                     └──────────┬───────────┘
+                                │
+                   ┌────────────┴────────────┐
+                   │  Cache enabled?         │
+                   └────────────┬────────────┘
+                                │
+              ┌─────────────────┼─────────────────┐
+              ▼                 │                 │
+   ┌──────────────────┐   NO    │            YES  │
+   │  EmbeddingClient │ ────────┼─────────────────┘
+   │  (Pattern #4)    │         │
+   │  + cosine_sim    │         │
+   └───────┬──────────┘         │
+           │                    │
+           ▼                    │
+┌─────────────────────┐         │
+│  Embedding Model    │         │
+│  nomic-embed-text   │         │
+│  (ollama-local)     │         │
+└────────┬────────────┘         │
+         │ embedding vector     │
+         ▼                      ▼
+┌─────────────────────┐   ┌──────────────┐
+│   SemanticCache     │   │  LLMClient   │ ◄── LLMConfig
+│   (in-memory)       │   │ (Pattern #2) │     qwen3.5:0.8b
+│                     │   └──────┬───────┘
+│   Stores:           │          │
+│   - query vector    │          │
+│   - RoutingIntent   │          │
+│   - hit count       │          │
+└────────┬────────────┘          │
+         │ cache HIT?            │
+   ┌─────┴─────┐                 │
+   │           │                 │
+YES │       NO  │                 │
+   ▼           │                 ▼
+   │           │          ┌──────────────┐
+   │           └────────> │  Agent       │
+   │                      │   Router     │
+   │                      │ (Pattern #1) │
+   │                      └──────┬───────┘
+   │                             │
+   ▼                             ▼
+   │                      ┌──────────────┐
+   └────────────────────>│  Target      │
+                         │  Agent       │
+                         │ (SalesAgent, │
+                         │  DevOpsAgent,│
+                         │  etc.)       │
+                         └──────────────┘
+
+─── Two Independent Providers ──────────────────────────────────────────
+  --provider-llm ollama-local        ──► LLMClient  ──► qwen3.5:0.8b
+  --provider-embedding ollama-local  ──► EmbeddingClient ──► nomic-embed-text
 
 ## Project Structure
 
