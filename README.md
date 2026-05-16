@@ -167,25 +167,25 @@ YES │       NO  │                 │
 
 ## Project Structure
 
-```
+```text
 coordination-patterns/
-├── pyproject.toml
-├── src/coordination_patterns/
-│   ├── __init__.py              # package exports
-│   ├── __main__.py              # CLI
-│   ├── capability_router/       # Pattern #1
-│   │   └── pattern.py
-│   ├── llm_interface/           # Pattern #2
-│   │   ├── config.py            # LLMConfig + EmbeddingConfig
-│   │   └── client.py            # LLMClient + EmbeddingClient
-│   ├── intent_extractor/        # Pattern #3
-│   │   └── extractor.py
-│   └── semantic_cache/          # Pattern #4
-│       ├── __init__.py          # SemanticCache + CachedEntry
-│       └── utils.py             # cosine_similarity
-├── tests/                       # Unit tests (no network)
-└── tests-integration/           # Integration tests (hits real LLM)
-    └── conftest.py              # Session-scoped fixtures
+  pyproject.toml
+  src/coordination_patterns/
+    __init__.py                  # package exports
+    __main__.py                  # CLI
+    capability_router/           # Pattern #1
+      pattern.py
+    llm_interface/               # Pattern #2
+      config.py                  # LLMConfig + EmbeddingConfig
+      client.py                  # LLMClient + EmbeddingClient
+    intent_extractor/            # Pattern #3
+      extractor.py
+    semantic_cache/              # Pattern #4
+      __init__.py                # SemanticCache + CachedEntry
+      utils.py                   # cosine_similarity
+  tests/                         # Unit tests (no network)
+  tests-integration/             # Integration tests (hits real LLM)
+    conftest.py                  # Session-scoped fixtures
 ```
 
 Built as a proper Python package using [uv](https://github.com/astral-sh/uv). Currently in Python as a prototype — the long-term goal is a Rust rewrite for performance and zero-cost abstractions.
