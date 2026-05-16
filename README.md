@@ -164,6 +164,7 @@ YES │       NO  │                 │
 ─── Two Independent Providers ──────────────────────────────────────────
   --provider-llm ollama-local        ──► LLMClient  ──► qwen3.5:0.8b
   --provider-embedding ollama-local  ──► EmbeddingClient ──► nomic-embed-text
+```
 
 ## Project Structure
 
