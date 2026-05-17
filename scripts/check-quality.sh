@@ -42,10 +42,28 @@ else
 fi
 
 echo ""
-echo "=== 6. Coverage report ==="
+echo "=== 6. Coverage report (min 35% lines) ==="
 if command -v cargo-llvm-cov &>/dev/null; then
-    cargo llvm-cov --tests --lcov -o coverage.lcov
-    echo "Coverage report written to coverage.lcov"
+    cargo llvm-cov \
+      --test test_capability_router \
+      --test test_intent_extractor \
+      --test test_llm_interface \
+      --test test_semantic_cache \
+      --test test_semantic_cache_utils \
+      --ignore-filename-regex='tests-unit' \
+      --fail-under-lines 35 \
+      --lcov \
+      --output-path docs/coverage.lcov
+    cargo llvm-cov \
+      --test test_capability_router \
+      --test test_intent_extractor \
+      --test test_llm_interface \
+      --test test_semantic_cache \
+      --test test_semantic_cache_utils \
+      --ignore-filename-regex='tests-unit' \
+      --json \
+      --output-path docs/coverage.json
+    echo "Coverage report written to docs/coverage.lcov and docs/coverage.json"
 else
     echo "FAIL: cargo-llvm-cov not installed (cargo install cargo-llvm-cov)"
     exit 1
