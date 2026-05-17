@@ -1,5 +1,6 @@
 use local_agent::capability_router::{ActionType, ResourceType, RoutingIntent};
-use local_agent::semantic_cache::{SemanticCache, SqliteSemanticCache};
+use local_agent::semantic_cache::SemanticCache;
+use local_agent::semantic_cache_sqlite::SqliteSemanticCache;
 use serde_json::json;
 
 fn intent(action: ActionType, resource: ResourceType) -> RoutingIntent {
@@ -14,12 +15,13 @@ fn embedding(vals: &[f64]) -> Vec<f64> {
     vals.to_vec()
 }
 
-fn temp_db() -> tempfile::NamedTempFile {
-    tempfile::Builder::new()
+fn temp_db() -> String {
+    let f = tempfile::Builder::new()
         .prefix("cache")
         .suffix(".db")
         .tempfile()
-        .unwrap()
+        .unwrap();
+    f.path().to_string_lossy().to_string()
 }
 
 #[test]
@@ -182,5 +184,4 @@ fn test_sqlite_close_releases_conn() {
     cache.close();
     // After close, the connection is dropped; the file should still exist
     assert!(std::path::Path::new(&path).exists());
-    std::fs::remove_file(&path).ok();
 }

@@ -1,9 +1,8 @@
 use std::sync::OnceLock;
 
-use local_agent::capability_router::{ActionType, ResourceType, RoutingIntent};
+use local_agent::capability_router::{ActionType, ResourceType};
 use local_agent::intent_extractor::IntentExtractor;
 use local_agent::llm_interface::{EmbeddingConfig, LLMConfig};
-use serde_json::json;
 
 static OLLAMA_CHECK: OnceLock<()> = OnceLock::new();
 
