@@ -34,11 +34,11 @@ if ! command -v cargo-llvm-cov &>/dev/null; then
 fi
 
 # --- Unit coverage (fast gate) ---
-echo "=== Unit coverage (min 43% lines) ==="
+echo "=== Unit coverage (min 55% lines) ==="
 cargo llvm-cov \
   "${UNIT_TESTS[@]}" \
   --ignore-filename-regex="$IGNORE_REGEX" \
-  --fail-under-lines 43 \
+  --fail-under-lines 55 \
   --summary-only
 echo "Unit coverage OK."
 
