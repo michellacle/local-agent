@@ -37,7 +37,8 @@ if command -v cargo-audit &>/dev/null; then
     cargo audit
     echo "Audit OK."
 else
-    echo "Skipped (install with: cargo install cargo-audit)"
+    echo "FAIL: cargo-audit not installed (cargo install cargo-audit)"
+    exit 1
 fi
 
 echo ""
@@ -46,7 +47,8 @@ if command -v cargo-llvm-cov &>/dev/null; then
     cargo llvm-cov --tests --lcov -o coverage.lcov
     echo "Coverage report written to coverage.lcov"
 else
-    echo "Skipped (install with: cargo install cargo-llvm-cov)"
+    echo "FAIL: cargo-llvm-cov not installed (cargo install cargo-llvm-cov)"
+    exit 1
 fi
 
 echo ""

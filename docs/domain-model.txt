@@ -1,0 +1,128 @@
+=================================================================
+  Domain Model — local-agent
+=================================================================
+
++---------------------------+
+| ActionType (enum)           |
+| module: capability_router   |
+|   [variant] Find            |
+|   [variant] Analyze         |
+|   [variant] Create          |
++---------------------------+
+
++--------------------------------------------------------+
+| AgentRouter (struct)                                     |
+| module: capability_router                                |
+|   capability_graph : HashMap<(String, String), String>   |
+|   implements: Default                                    |
++--------------------------------------------------------+
+
++------------------------+
+| CacheStore: (trait)      |
+| module: semantic_cache   |
++------------------------+
+
++--------------------------+
+| CachedEntry (struct)       |
+| module: semantic_cache     |
+|   query : String           |
+|   embedding : Vec<f64>     |
+|   intent : RoutingIntent   |
+|   created_at : f64         |
+|   hit_count : u64          |
++--------------------------+
+  |--has--> RoutingIntent (via .intent)
+
++----------------------------+
+| EmbeddingClient (struct)     |
+| module: llm_interface        |
+|   config : EmbeddingConfig   |
+|   agent : Agent              |
++----------------------------+
+  |--has--> EmbeddingConfig (via .config)
+
++--------------------------+
+| EmbeddingConfig (struct)   |
+| module: llm_interface      |
+|   provider : String        |
+|   base_url : String        |
+|   model : String           |
+|   timeout : u64            |
+|   implements: Default      |
++--------------------------+
+
++------------------------------------------+
+| IntentExtractor (struct)                   |
+| module: intent_extractor                   |
+|   client : LLMClient                       |
+|   embed_client : Option<EmbeddingClient>   |
+|   router : AgentRouter                     |
+|   cache : Option<SemanticCache>            |
+|   cache_enabled : bool                     |
++------------------------------------------+
+  |--has--> AgentRouter (via .router)
+  |--has--> LLMClient (via .client)
+
++-----------------------+
+| LLMClient (struct)      |
+| module: llm_interface   |
+|   config : LLMConfig    |
+|   agent : Agent         |
++-----------------------+
+  |--has--> LLMConfig (via .config)
+
++------------------------+
+| LLMConfig (struct)       |
+| module: llm_interface    |
+|   provider : String      |
+|   base_url : String      |
+|   model : String         |
+|   api_key : String       |
+|   temperature : f64      |
+|   max_tokens : u32       |
+|   timeout : u64          |
+|   deterministic : bool   |
+|   implements: Default    |
++------------------------+
+
++------------------------------------+
+| MemoryCacheStore (struct)            |
+| module: semantic_cache               |
+|   entries : Mutex<Vec<CacheTuple>>   |
+|   implements: Default, CacheStore    |
++------------------------------------+
+
++---------------------------+
+| ResourceType (enum)         |
+| module: capability_router   |
+|   [variant] SalesReport     |
+|   [variant] ServerLog       |
+|   [variant] Document        |
++---------------------------+
+
++---------------------------+
+| RoutingIntent (struct)      |
+| module: capability_router   |
+|   action : ActionType       |
+|   resource : ResourceType   |
+|   parameters : Value        |
++---------------------------+
+  |--has--> ActionType (via .action)
+  |--has--> ResourceType (via .resource)
+
++---------------------------------+
+| SemanticCache (struct)            |
+| module: semantic_cache            |
+|   threshold : f64                 |
+|   max_size : usize                |
+|   backend : Box<dyn CacheStore>   |
+|   entries : Vec<CachedEntry>      |
++---------------------------------+
+
++---------------------------+
+| SqliteCacheStore (struct)   |
+| module: semantic_cache      |
+|   conn : Connection>        |
+|   implements: CacheStore    |
++---------------------------+
+

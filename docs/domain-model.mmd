@@ -1,0 +1,95 @@
+%% Domain Model — local-agent
+classDiagram
+
+  class ActionType {
+    <<Find>>
+    <<Analyze>>
+    <<Create>>
+  }
+
+  class AgentRouter {
+    HashMap<(String, String), String> : capability_graph
+  }
+
+  class CacheStore: {
+    <<trait>>
+  }
+
+  class CachedEntry {
+    String : query
+    Vec<f64> : embedding
+    RoutingIntent : intent
+    f64 : created_at
+    u64 : hit_count
+  }
+
+  class EmbeddingClient {
+    EmbeddingConfig : config
+    Agent : agent
+  }
+
+  class EmbeddingConfig {
+    String : provider
+    String : base_url
+    String : model
+    u64 : timeout
+  }
+
+  class IntentExtractor {
+    LLMClient : client
+    Option<EmbeddingClient> : embed_client
+    AgentRouter : router
+    Option<SemanticCache> : cache
+    bool : cache_enabled
+  }
+
+  class LLMClient {
+    LLMConfig : config
+    Agent : agent
+  }
+
+  class LLMConfig {
+    String : provider
+    String : base_url
+    String : model
+    String : api_key
+    f64 : temperature
+    u32 : max_tokens
+    u64 : timeout
+    bool : deterministic
+  }
+
+  class MemoryCacheStore {
+    Mutex<Vec<CacheTuple>> : entries
+  }
+
+  class ResourceType {
+    <<SalesReport>>
+    <<ServerLog>>
+    <<Document>>
+  }
+
+  class RoutingIntent {
+    ActionType : action
+    ResourceType : resource
+    Value : parameters
+  }
+
+  class SemanticCache {
+    f64 : threshold
+    usize : max_size
+    Box<dyn CacheStore> : backend
+    Vec<CachedEntry> : entries
+  }
+
+  class SqliteCacheStore {
+    Connection> : conn
+  }
+
+  CachedEntry --> "intent" : RoutingIntent
+  EmbeddingClient --> "config" : EmbeddingConfig
+  IntentExtractor --> "client" : LLMClient
+  IntentExtractor --> "router" : AgentRouter
+  LLMClient --> "config" : LLMConfig
+  RoutingIntent --> "action" : ActionType
+  RoutingIntent --> "resource" : ResourceType
