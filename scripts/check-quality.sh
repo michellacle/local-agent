@@ -24,6 +24,7 @@ cargo test \
   --test test_llm_interface \
   --test test_semantic_cache \
   --test test_semantic_cache_utils \
+  --test test_semantic_cache_mock \
   --quiet
 echo "All unit tests passed."
 
@@ -50,7 +51,8 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --test test_llm_interface \
       --test test_semantic_cache \
       --test test_semantic_cache_utils \
-      --ignore-filename-regex='tests-unit|/src/bin/' \
+      --test test_semantic_cache_mock \
+      --ignore-filename-regex='tests-unit|/src/bin/|semantic_cache_sqlite' \
       --fail-under-lines 35 \
       --lcov \
       --output-path docs/coverage.lcov
@@ -60,7 +62,8 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --test test_llm_interface \
       --test test_semantic_cache \
       --test test_semantic_cache_utils \
-      --ignore-filename-regex='tests-unit|/src/bin/' \
+      --test test_semantic_cache_mock \
+      --ignore-filename-regex='tests-unit|/src/bin/|semantic_cache_sqlite' \
       --json \
       --output-path docs/coverage.json
     cargo llvm-cov \
@@ -69,7 +72,8 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --test test_llm_interface \
       --test test_semantic_cache \
       --test test_semantic_cache_utils \
-      --ignore-filename-regex='tests-unit|/src/bin/' \
+      --test test_semantic_cache_mock \
+      --ignore-filename-regex='tests-unit|/src/bin/|semantic_cache_sqlite' \
       --html \
       --output-dir docs/coverage-html
     echo "Coverage reports written to docs/coverage.lcov, docs/coverage.json, docs/coverage-html/"

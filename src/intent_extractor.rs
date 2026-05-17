@@ -11,14 +11,14 @@ pub struct IntentExtractor {
     /// Router that maps resolved intents to agent names.
     router: AgentRouter,
     /// Optional semantic cache for bypassing the LLM on similar queries.
-    pub cache: Option<SemanticCache>,
+    pub cache: Option<Box<dyn SemanticCache>>,
 }
 
 impl IntentExtractor {
     pub fn new(
         client: LLMClient,
         embed_client: Option<EmbeddingClient>,
-        cache: Option<SemanticCache>,
+        cache: Option<Box<dyn SemanticCache>>,
     ) -> Self {
         Self {
             client,

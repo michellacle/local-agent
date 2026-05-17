@@ -45,5 +45,13 @@ name = "test_semantic_cache_utils"
 path = "tests-unit/test_semantic_cache_utils.rs"
 
 [[test]]
+name = "test_semantic_cache_mock"
+path = "tests-unit/test_semantic_cache_mock.rs"
+
+[[test]]
+name = "test_semantic_cache_sqlite"
+path = "tests-integration/test_semantic_cache_sqlite.rs"
+
+[[test]]
 name = "integration_tests"
 path = "tests-integration/integration_tests.rs"

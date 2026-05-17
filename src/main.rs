@@ -152,21 +152,27 @@ fn cmd_extract(args: &Commands) {
     println!("---");
 
     let llm_client = local_agent::llm_interface::LLMClient::new(Some(llm_config));
-    let (embed_client, cache) = if *cache {
+    let (embed_client, cache): (
+        Option<_>,
+        Option<Box<dyn local_agent::semantic_cache::SemanticCache>>,
+    ) = if *cache {
         let embed_client = Some(local_agent::llm_interface::EmbeddingClient::new(Some(
             embed_config,
         )));
-        let cache = Some(local_agent::semantic_cache::SemanticCache::new(
-            0.92,
-            1000,
-            cache_store,
-            if cache_store == "sqlite" {
-                cache_path.as_deref()
-            } else {
-                None
-            },
-        ));
-        (embed_client, cache)
+        let cache: Box<dyn local_agent::semantic_cache::SemanticCache> = if cache_store == "sqlite"
+        {
+            let default_cache_path = {
+                let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
+                format!("{}/.local/share/local-agent/cache.db", home)
+            };
+            let path = cache_path.as_deref().unwrap_or(&default_cache_path);
+            Box::new(local_agent::semantic_cache_sqlite::SqliteSemanticCache::new(0.92, 1000, path))
+        } else {
+            Box::new(local_agent::semantic_cache::InMemorySemanticCache::new(
+                0.92, 1000,
+            ))
+        };
+        (embed_client, Some(cache))
     } else {
         (None, None)
     };

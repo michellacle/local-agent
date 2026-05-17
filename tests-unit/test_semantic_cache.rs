@@ -1,5 +1,5 @@
 use local_agent::capability_router::{ActionType, ResourceType, RoutingIntent};
-use local_agent::semantic_cache::{CachedEntry, SemanticCache};
+use local_agent::semantic_cache::{CachedEntry, InMemorySemanticCache, SemanticCache};
 use serde_json::json;
 
 fn intent(action: ActionType, resource: ResourceType) -> RoutingIntent {
@@ -16,7 +16,7 @@ fn embedding(vals: &[f64]) -> Vec<f64> {
 
 #[test]
 fn test_lookup_exact_match() {
-    let mut cache = SemanticCache::with_memory(0.92, 1000);
+    let mut cache = InMemorySemanticCache::new(0.92, 1000);
     let emb = embedding(&[1.0, 0.0, 0.0]);
     cache.store(
         "query",
@@ -30,7 +30,7 @@ fn test_lookup_exact_match() {
 
 #[test]
 fn test_lookup_no_match() {
-    let mut cache = SemanticCache::with_memory(0.92, 1000);
+    let mut cache = InMemorySemanticCache::new(0.92, 1000);
     let emb_a = embedding(&[1.0, 0.0, 0.0]);
     let emb_b = embedding(&[0.0, 1.0, 0.0]);
     cache.store(
@@ -45,7 +45,7 @@ fn test_lookup_no_match() {
 #[test]
 fn test_lookup_similar_below_threshold() {
     // Vectors with ~0.99 similarity fail a 0.995 threshold
-    let mut cache = SemanticCache::with_memory(0.995, 1000);
+    let mut cache = InMemorySemanticCache::new(0.995, 1000);
     let emb_a = embedding(&[1.0, 0.1, 0.0]);
     let emb_b = embedding(&[1.0, 0.0, 0.1]);
     cache.store(
@@ -59,7 +59,7 @@ fn test_lookup_similar_below_threshold() {
 
 #[test]
 fn test_lookup_hit_increments_hit_count() {
-    let mut cache = SemanticCache::with_memory(0.92, 1000);
+    let mut cache = InMemorySemanticCache::new(0.92, 1000);
     let emb = embedding(&[1.0, 0.0, 0.0]);
     cache.store(
         "query",
@@ -73,7 +73,7 @@ fn test_lookup_hit_increments_hit_count() {
 
 #[test]
 fn test_eviction_keeps_most_hit() {
-    let mut cache = SemanticCache::with_memory(0.92, 2);
+    let mut cache = InMemorySemanticCache::new(0.92, 2);
     let emb_a = embedding(&[1.0, 0.0, 0.0]);
     let emb_b = embedding(&[0.0, 1.0, 0.0]);
     let emb_c = embedding(&[0.0, 0.0, 1.0]);
@@ -104,7 +104,7 @@ fn test_eviction_keeps_most_hit() {
 
 #[test]
 fn test_clear() {
-    let mut cache = SemanticCache::with_memory(0.92, 1000);
+    let mut cache = InMemorySemanticCache::new(0.92, 1000);
     cache.store(
         "q",
         &embedding(&[1.0]),

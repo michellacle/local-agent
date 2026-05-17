@@ -30,7 +30,11 @@ fn format_speed(v: f64) -> String {
 fn make_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
     let client = local_agent::llm_interface::LLMClient::new(Some(config));
-    IntentExtractor::new(client, None, None)
+    IntentExtractor::new(
+        client,
+        None,
+        None::<Box<dyn local_agent::semantic_cache::SemanticCache>>,
+    )
 }
 
 fn make_cached_extractor() -> IntentExtractor {
@@ -38,7 +42,9 @@ fn make_cached_extractor() -> IntentExtractor {
     let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
     let client = local_agent::llm_interface::LLMClient::new(Some(config));
     let embed_client = local_agent::llm_interface::EmbeddingClient::new(Some(embed_config));
-    let cache = local_agent::semantic_cache::SemanticCache::new(0.92, 1000, "memory", None);
+    let cache: Box<dyn local_agent::semantic_cache::SemanticCache> = Box::new(
+        local_agent::semantic_cache::InMemorySemanticCache::new(0.92, 1000),
+    );
     IntentExtractor::new(client, Some(embed_client), Some(cache))
 }
 
@@ -225,59 +231,4 @@ fn test_cache_bypasses_llm_for_identical_query() {
     assert!(extractor.cache.as_ref().unwrap().size() >= 1);
 }
 
-#[test]
-fn test_sqlite_persistence_survives_restart() {
-    let tmpdir = tempfile::tempdir().unwrap();
-    let db_path = tmpdir.path().join("cache.db");
-    let db_path_str = db_path.to_str().unwrap();
-    let embedding = vec![0.1, 0.2, 0.3, 0.4, 0.5];
-    let intent = RoutingIntent {
-        action: ActionType::Find,
-        resource: ResourceType::SalesReport,
-        parameters: json!({"quarter": "Q1"}),
-    };
-
-    // First instance: store an entry
-    {
-        let mut cache1 =
-            local_agent::semantic_cache::SemanticCache::with_sqlite(0.92, 1000, db_path_str);
-        cache1.store("Find the Q1 sales report", &embedding, &intent);
-        assert_eq!(cache1.size(), 1);
-        cache1.close();
-    }
-
-    // Second instance: reload from disk
-    {
-        let mut cache2 =
-            local_agent::semantic_cache::SemanticCache::with_sqlite(0.92, 1000, db_path_str);
-        let cached = cache2.lookup(&embedding);
-        assert!(cached.is_some());
-        let cached = cached.unwrap();
-        assert_eq!(cached.action, ActionType::Find);
-        assert_eq!(cached.resource, ResourceType::SalesReport);
-        assert_eq!(cache2.size(), 1);
-        cache2.close();
-    }
-}
-
-#[test]
-fn test_sqlite_clear_removes_entries() {
-    let tmpdir = tempfile::tempdir().unwrap();
-    let db_path = tmpdir.path().join("cache.db");
-    let db_path_str = db_path.to_str().unwrap();
-    let embedding = vec![0.5, 0.5, 0.5];
-    let intent = RoutingIntent {
-        action: ActionType::Create,
-        resource: ResourceType::Document,
-        parameters: json!({}),
-    };
-
-    let mut cache =
-        local_agent::semantic_cache::SemanticCache::with_sqlite(0.92, 1000, db_path_str);
-    cache.store("Create a new document", &embedding, &intent);
-    cache.clear();
-    assert_eq!(cache.size(), 0);
-    let result = cache.lookup(&embedding);
-    assert!(result.is_none());
-    cache.close();
-}
+// NOTE: sqlite-specific tests have been moved to tests-integration/test_semantic_cache_sqlite.rs
