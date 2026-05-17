@@ -9,36 +9,32 @@ routing, and dispatch. No data ever leaves your network.
 
 Built for privacy-focused use cases where your data stays yours.
 
-**Current:** Python prototype using `uv`  
-**Long-term goal:** Reimplement in Rust for performance and zero-cost abstractions
+Written in Rust for performance and zero-cost abstractions.
 
 Proven patterns included: capability graphs, semantic intent extraction, agent routing, and caching.
 
 ## Quick Start
 
 ```bash
-# Install all dependencies
-uv sync --all-extras
-
 # Extract intent (uses defaults — no flags needed)
-uv run coordination-patterns extract "Find the Q1 sales report"
+cargo run -- extract "Find the Q1 sales report"
 
 # Override the LLM model
-uv run coordination-patterns extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
+cargo run -- extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
 
 # Enable semantic cache (uses defaults for both providers)
-uv run coordination-patterns extract "Find the Q1 sales report" --cache
+cargo run -- extract "Find the Q1 sales report" --cache
 
 # Full customization
-uv run coordination-patterns extract "Find the Q1 sales report" \
-  --provider-llm ollama-local --model-llm qwen3.5:2b \
-  --provider-embedding ollama-local --model-embedding nomic-embed-text \
-  --cache
+cargo run -- extract "Find the Q1 sales report" \
+  --model-llm qwen3.5:2b \
+  --model-embedding nomic-embed-text \
+  --cache \
+  --cache-store sqlite
 
 # Run tests
-uv run pytest tests/ -v                      # Unit tests (fast, no network)
-uv run pytest tests-integration/ -v          # Integration tests (hits real LLM)
-uv run pytest tests-integration/ --ignore=tests-integration/test_cache_speed.py  # Skip cache tests (needs embed model)
+cargo test -v                              # All tests (unit + integration)
+cargo test -- --include-ignored            # Include ignored integration tests
 ```
 
 ## CLI Options
@@ -47,16 +43,14 @@ All options are optional. Sensible defaults are applied:
 
 | Option | Default | Description |
 |---|---|---|
-| `--provider-llm` | `ollama-local` | LLM provider for intent extraction |
 | `--model-llm` | `qwen3.5:2b` | Model name for the LLM provider |
-| `--provider-embedding` | `ollama-local` | Embedding provider for semantic cache |
 | `--model-embedding` | `nomic-embed-text` | Model name for the embedding provider |
 | `--host` | `localhost` | Override host for all providers |
 | `--cache` | `false` | Enable semantic intent cache |
 | `--cache-store` | `memory` | Cache persistence backend (`memory` or `sqlite`) |
 | `--cache-path` | `~/.local/share/coordination-patterns/cache.db` | Path to SQLite cache database |
 
-The embedding provider and model are only used when `--cache` is enabled.
+The embedding model is only used when `--cache` is enabled.
 When `--cache-store sqlite` is used, cached entries persist across restarts.
 
 ## Patterns
@@ -64,54 +58,65 @@ When `--cache-store sqlite` is used, cached entries persist across restarts.
 ### 1. Capability Graph Router
 Route requests to specialized agents using `(action, resource)` → `agent` lookup.
 
-```python
-from coordination_patterns import AgentRouter, RoutingIntent
+```rust
+use coordination_patterns::capability_router::{AgentRouter, RoutingIntent};
 
-router = AgentRouter()
-intent = RoutingIntent(action="find", resource="sales_report", parameters={"quarter": "Q1"})
-result = router.route_request(intent)
-# → "Routing to SalesAgent with params: {'quarter': 'Q1'}"
+let mut router = AgentRouter::new();
+let intent = RoutingIntent {
+    action: "find".into(),
+    resource: "sales_report".into(),
+    parameters: serde_json::json!({"quarter": "Q1"}),
+};
+let result = router.route_request(&intent);
+// → "Routing to SalesAgent with params: {"quarter":"Q1"}"
 ```
 
 ### 2. LLM Interface (Swappable Backends)
 Talk to any OpenAI-compatible LLM without hardcoding endpoints.
 
-```python
-from coordination_patterns import LLMClient, LLMConfig
+```rust
+use coordination_patterns::llm_interface::{LLMClient, LLMConfig};
 
-client = LLMClient(LLMConfig())
-response = client.chat(messages=[{"role": "user", "content": "Hello"}])
+let client = LLMClient::new(LLMConfig::default());
+let response = client.chat(&[
+    serde_json::json!({"role": "user", "content": "Hello"}),
+]).unwrap();
 ```
 
 ### 3. Semantic Intent Extraction (Full Pipeline)
 Natural language → LLM extracts structured intent → route to agent.
 
-```python
-from coordination_patterns import IntentExtractor, LLMConfig
+```rust
+use coordination_patterns::intent_extractor::IntentExtractor;
+use coordination_patterns::llm_interface::LLMConfig;
 
-with IntentExtractor(LLMConfig()) as extractor:
-    result = extractor.process("Find the Q1 sales report")
-    # Internally:
-    # 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
-    # 2. Router dispatches to SalesAgent
-    # 3. Returns result
+let extractor = IntentExtractor::new(LLMConfig::default());
+let result = extractor.process("Find the Q1 sales report").unwrap();
+// Internally:
+// 1. LLM extracts: {action: "find", resource: "sales_report", parameters: {"quarter": "Q1"}}
+// 2. Router dispatches to SalesAgent
+// 3. Returns result
 ```
 
 ### 4. Semantic Intent Cache
 Bypass the LLM for previously seen (or similar) queries. Requires a separate embedding model.
 
-```python
-from coordination_patterns import IntentExtractor, LLMConfig, EmbeddingConfig
+```rust
+use coordination_patterns::intent_extractor::IntentExtractor;
+use coordination_patterns::llm_interface::{LLMConfig, EmbeddingConfig};
+use coordination_patterns::semantic_cache::CacheStore;
 
-with IntentExtractor(
-    LLMConfig(model="qwen3.5:0.8b"),
-    embed_config=EmbeddingConfig(model="nomic-embed-text"),
-    cache_enabled=True,
-) as extractor:
-    # First call — hits LLM (~2s)
-    extractor.process("Find the Q1 sales report")
-    # Second call — cache hit (~0.01s)
-    extractor.process("Find the Q1 sales report")
+let extractor = IntentExtractor::builder()
+    .llm_config(LLMConfig::default())
+    .embed_config(EmbeddingConfig::default())
+    .cache_enabled(true)
+    .cache_store(CacheStore::Memory)
+    .build();
+
+// First call — hits LLM (~2s)
+extractor.process("Find the Q1 sales report").unwrap();
+// Second call — cache hit (~0.01s)
+extractor.process("Find the Q1 sales report").unwrap();
 ```
 
 ## Architecture
@@ -149,7 +154,7 @@ with IntentExtractor(
          ▼                      ▼
 ┌─────────────────────┐   ┌──────────────┐
 │   SemanticCache     │   │  LLMClient   │ ◄── LLMConfig
-│   (in-memory)       │   │ (Pattern #2) │     qwen3.5:0.8b
+│   (in-memory/sqlite)│   │ (Pattern #2) │     qwen3.5:0.8b
 │                     │   └──────┬───────┘
 │   Stores:           │          │
 │   - query vector    │          │
@@ -177,59 +182,43 @@ YES │       NO  │                 │
                          └──────────────┘
 
 ─── Two Independent Providers ──────────────────────────────────────────
-  --provider-llm ollama-local        ──► LLMClient  ──► qwen3.5:0.8b
-  --provider-embedding ollama-local  ──► EmbeddingClient ──► nomic-embed-text
+  --model-llm qwen3.5:2b           ──► LLMClient  ──► qwen3.5:2b
+  --model-embedding nomic-embed-text ─► EmbeddingClient ──► nomic-embed-text
 ```
 
 ## Project Structure
 
 ```text
-coordination-patterns/
-  pyproject.toml
-  src/coordination_patterns/
-    __init__.py                  # package exports
-    __main__.py                  # CLI
-    capability_router/           # Pattern #1
-      pattern.py
-    llm_interface/               # Pattern #2
-      config.py                  # LLMConfig + EmbeddingConfig
-      client.py                  # LLMClient + EmbeddingClient
-    intent_extractor/            # Pattern #3
-      extractor.py
-    semantic_cache/              # Pattern #4
-      __init__.py                # SemanticCache + CachedEntry
-      utils.py                   # cosine_similarity
-  tests/                         # Unit tests (no network)
-  tests-integration/             # Integration tests (hits real LLM)
-    conftest.py                  # Session-scoped fixtures
+local-agent/
+  rust/
+    Cargo.toml
+    src/
+      lib.rs                       # library exports
+      main.rs                      # CLI (clap-based)
+      capability_router.rs         # Pattern #1
+      llm_interface.rs             # Pattern #2 (LLMConfig, EmbeddingConfig, clients)
+      intent_extractor.rs          # Pattern #3
+      semantic_cache.rs            # Pattern #4 (SemanticCache, cosine_similarity, stores)
+    tests/
+      test_capability_router.rs    # Unit tests
+      test_llm_interface.rs        # Unit tests
+      test_intent_extractor.rs     # Unit tests
+      test_semantic_cache.rs       # Unit tests
+      test_semantic_cache_utils.rs # Unit tests
+      integration_tests.rs         # Integration tests (SQLite + Ollama)
 ```
 
-Built as a proper Python package using [uv](https://github.com/astral-sh/uv). Currently in Python as a prototype — the long-term goal is a Rust rewrite for performance and zero-cost abstractions.
-
-## uv Quick Reference
-
-| Command | What it does |
-|---|---|
-| `uv init` | Create a new project |
-| `uv add <pkg>` | Add dependency + update lockfile |
-| `uv sync` | Install deps from lockfile |
-| `uv run <cmd>` | Run a command in the virtual env |
-| `uv remove <pkg>` | Remove a dependency |
-| `uv lock` | Regenerate the lockfile |
-| `uv build` | Build a wheel/sdist |
-| `uv publish` | Publish to PyPI |
+Built in Rust with [`serde`](https://serde.rs/), [`clap`](https://docs.rs/clap/), [`ureq`](https://docs.rs/ureq/), [`rusqlite`](https://docs.rs/rusqlite/), and [`schemars`](https://docs.rs/schemars/).
 
 ## Quality Standards
 
-- **Type annotations**: All functions, methods, and class attributes must have type annotations.
-- **Unit tests**: Every new feature requires unit tests in `tests/`.
-- **Integration tests**: Features involving external subsystems (LLM API calls, network requests, file I/O) require integration tests in `tests-integration/`.
-- **Future annotations**: Use `from __future__ import annotations` in all modules.
-- **Explicit types**: Use explicit types like `dict[str, Any]` instead of bare `dict`.
+- **Type safety**: Full static typing with Rust's type system — no runtime type errors.
+- **Unit tests**: Every feature has unit tests in `rust/tests/`.
+- **Integration tests**: Features involving external subsystems (LLM API calls, SQLite I/O) have integration tests.
+- **Zero-cost abstractions**: No unnecessary allocations, sync-first design, minimal dependencies.
 
 ## Adding New Patterns
 
-1. Create a new module under `src/coordination_patterns/<name>/`
-2. Add `__init__.py` + `pattern.py`
-3. Add tests under `tests/`
-4. Export from `src/coordination_patterns/__init__.py`
+1. Create a new module under `rust/src/<name>.rs`
+2. Add tests under `rust/tests/`
+3. Export from `rust/src/lib.rs`
