@@ -1,4 +1,4 @@
-use crate::supervisor::{Supervisor, WorkerAgent, WorkflowResult, WorkflowStep, WorkflowStatus};
+use crate::supervisor::{Supervisor, WorkerAgent, WorkflowResult, WorkflowStatus, WorkflowStep};
 use serde_json::Value;
 
 /// Mock document validation worker.
@@ -154,12 +154,7 @@ impl LoanOrchestratorAgent {
                 WorkflowStep::new("risk_assessment", "risk_assessor").with_condition(|output| {
                     let parsed: Result<serde_json::Value, _> = serde_json::from_str(output);
                     parsed
-                        .map(|v| {
-                            v.get("credit_score")
-                                .and_then(|s| s.as_u64())
-                                .unwrap_or(0)
-                                >= 600
-                        })
+                        .map(|v| v.get("credit_score").and_then(|s| s.as_u64()).unwrap_or(0) >= 600)
                         .unwrap_or(false)
                 }),
             )
@@ -211,12 +206,8 @@ impl LoanOrchestratorAgent {
                     "Application Rejected: No audit entries".into()
                 }
             }
-            WorkflowStatus::Failed => {
-                "Application Rejected: Critical workflow failure".into()
-            }
-            WorkflowStatus::Running => {
-                "Application: Still processing".into()
-            }
+            WorkflowStatus::Failed => "Application Rejected: Critical workflow failure".into(),
+            WorkflowStatus::Running => "Application: Still processing".into(),
         }
     }
 }

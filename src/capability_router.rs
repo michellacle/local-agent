@@ -24,6 +24,8 @@ pub enum ResourceType {
     ServerLog,
     /// A general-purpose document.
     Document,
+    /// A loan application for approval workflow.
+    LoanApplication,
 }
 
 /// A structured intent extracted from natural language, used to route to the correct agent.
@@ -98,6 +100,10 @@ impl AgentRouter {
         );
         capability_graph.insert(("find".into(), "document".into()), "ComplianceAgent".into());
         capability_graph.insert(("create".into(), "server_log".into()), "DevOpsAgent".into());
+        capability_graph.insert(
+            ("create".into(), "loan_application".into()),
+            "LoanOrchestratorAgent".into(),
+        );
         Self { capability_graph }
     }
 
@@ -117,10 +123,7 @@ impl AgentRouter {
 
         match self.capability_graph.get(&key) {
             Some(agent) => {
-                println!(
-                    "Routing to {} with params: {}",
-                    agent, intent.parameters
-                );
+                println!("Routing to {} with params: {}", agent, intent.parameters);
                 RouteResult::Routed {
                     agent_name: agent.clone(),
                     parameters: intent.parameters.clone(),

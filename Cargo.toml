@@ -57,8 +57,16 @@ name = "test_supervisor"
 path = "tests-unit/test_supervisor.rs"
 
 [[test]]
+name = "test_loan_pipeline"
+path = "tests-unit/test_loan_pipeline.rs"
+
+[[test]]
 name = "test_loan_orchestrator"
-path = "tests-integration/test_loan_orchestrator.rs"
+path = "tests-unit/test_loan_orchestrator.rs"
+
+[[test]]
+name = "test_loan_e2e"
+path = "tests-integration/test_loan_e2e.rs"
 
 [[test]]
 name = "integration_tests"

@@ -1,4 +1,6 @@
-use local_agent::supervisor::{Supervisor, WorkflowResult, WorkflowStep, WorkflowStatus, WorkerAgent};
+use local_agent::supervisor::{
+    Supervisor, WorkerAgent, WorkflowResult, WorkflowStatus, WorkflowStep,
+};
 
 // --- Test Workers ---
 
@@ -124,10 +126,7 @@ fn test_supervisor_sequential_two_steps() {
     assert_eq!(result.status, WorkflowStatus::Completed);
     assert_eq!(result.step_outputs["validate"], "echoed: initial");
     // step2 receives step1's output as input
-    assert_eq!(
-        result.step_outputs["prefix"],
-        "[PREFIX]echoed: initial"
-    );
+    assert_eq!(result.step_outputs["prefix"], "[PREFIX]echoed: initial");
 }
 
 // --- TC5: 3+ step chain, outputs captured in order ---
@@ -136,18 +135,14 @@ fn test_supervisor_sequential_two_steps() {
 fn test_supervisor_sequential_three_steps() {
     let count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let mut sup = Supervisor::builder("start")
-        .add_worker(Box::new(EchoWorker {
-            name: "w1".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w1".into() }))
         .unwrap()
         .add_worker(Box::new(CountWorker {
             name: "w2".into(),
             count: count.clone(),
         }))
         .unwrap()
-        .add_worker(Box::new(EchoWorker {
-            name: "w3".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w3".into() }))
         .unwrap()
         .add_step(WorkflowStep::new("s1", "w1"))
         .add_step(WorkflowStep::new("s2", "w2"))
@@ -200,9 +195,8 @@ fn test_supervisor_condition_met_continues() {
         .unwrap()
         .add_step(WorkflowStep::new("validate", "validator"))
         .add_step(
-            WorkflowStep::new("process", "processor").with_condition(|output| {
-                output.contains("echoed")
-            }),
+            WorkflowStep::new("process", "processor")
+                .with_condition(|output| output.contains("echoed")),
         )
         .build()
         .unwrap();
@@ -247,17 +241,11 @@ fn test_supervisor_condition_not_met_halts() {
 #[test]
 fn test_supervisor_terminal_halt() {
     let mut sup = Supervisor::builder("initial")
-        .add_worker(Box::new(EchoWorker {
-            name: "w1".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w1".into() }))
         .unwrap()
-        .add_worker(Box::new(EchoWorker {
-            name: "w2".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w2".into() }))
         .unwrap()
-        .add_worker(Box::new(EchoWorker {
-            name: "w3".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w3".into() }))
         .unwrap()
         .add_step(WorkflowStep::new("s1", "w1"))
         .add_step(
@@ -406,31 +394,31 @@ fn test_supervisor_structured_context_passing() {
         fn execute(&self, input: &str) -> Result<String, String> {
             let mut obj: serde_json::Value =
                 serde_json::from_str(input).unwrap_or(serde_json::json!({"steps": []}));
-            obj["steps"].as_array_mut().unwrap().push(serde_json::json!(self.name));
+            obj["steps"]
+                .as_array_mut()
+                .unwrap()
+                .push(serde_json::json!(self.name));
             Ok(obj.to_string())
         }
     }
 
-    let mut sup = Supervisor::builder(
-        serde_json::json!({"steps": []}).to_string().as_str(),
-    )
-    .add_worker(Box::new(JsonPassWorker {
-        name: "first".into(),
-    }))
-    .unwrap()
-    .add_worker(Box::new(JsonPassWorker {
-        name: "second".into(),
-    }))
-    .unwrap()
-    .add_step(WorkflowStep::new("s1", "first"))
-    .add_step(WorkflowStep::new("s2", "second"))
-    .build()
-    .unwrap();
+    let mut sup = Supervisor::builder(serde_json::json!({"steps": []}).to_string().as_str())
+        .add_worker(Box::new(JsonPassWorker {
+            name: "first".into(),
+        }))
+        .unwrap()
+        .add_worker(Box::new(JsonPassWorker {
+            name: "second".into(),
+        }))
+        .unwrap()
+        .add_step(WorkflowStep::new("s1", "first"))
+        .add_step(WorkflowStep::new("s2", "second"))
+        .build()
+        .unwrap();
 
     let result = sup.execute();
 
-    let final_json: serde_json::Value =
-        serde_json::from_str(&result.final_output).unwrap();
+    let final_json: serde_json::Value = serde_json::from_str(&result.final_output).unwrap();
     let steps = final_json["steps"].as_array().unwrap();
     assert_eq!(steps.len(), 2);
     assert_eq!(steps[0], "first");
@@ -465,9 +453,7 @@ fn test_supervisor_audit_trail_records_details() {
 #[test]
 fn test_supervisor_audit_in_result() {
     let mut sup = Supervisor::builder("goal")
-        .add_worker(Box::new(EchoWorker {
-            name: "w".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w".into() }))
         .unwrap()
         .add_step(WorkflowStep::new("s1", "w"))
         .add_step(WorkflowStep::new("s2", "w"))
@@ -542,9 +528,7 @@ fn test_builder_rejects_unregistered_worker() {
 #[test]
 fn test_supervisor_empty_steps_completes() {
     let mut sup = Supervisor::builder("goal")
-        .add_worker(Box::new(EchoWorker {
-            name: "w".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w".into() }))
         .unwrap()
         .build()
         .unwrap();
@@ -561,9 +545,7 @@ fn test_supervisor_empty_steps_completes() {
 #[test]
 fn test_first_step_receives_goal() {
     let mut sup = Supervisor::builder("my goal text")
-        .add_worker(Box::new(EchoWorker {
-            name: "w".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w".into() }))
         .unwrap()
         .add_step(WorkflowStep::new("s1", "w"))
         .build()
@@ -579,9 +561,7 @@ fn test_first_step_receives_goal() {
 #[test]
 fn test_workflow_result_serialization() {
     let mut sup = Supervisor::builder("goal")
-        .add_worker(Box::new(EchoWorker {
-            name: "w".into(),
-        }))
+        .add_worker(Box::new(EchoWorker { name: "w".into() }))
         .unwrap()
         .add_step(WorkflowStep::new("s1", "w"))
         .build()

@@ -1,4 +1,4 @@
-use crate::capability_router::{ActionType, AgentRouter, RouteResult, ResourceType, RoutingIntent};
+use crate::capability_router::{ActionType, AgentRouter, ResourceType, RouteResult, RoutingIntent};
 use crate::llm_interface::{EmbeddingClientTrait, LLMClientTrait};
 use crate::semantic_cache::SemanticCache;
 
@@ -47,7 +47,7 @@ impl IntentExtractor {
 
 Given a natural language request, extract:
 - action: one of find, analyze, create
-- resource: one of sales_report, server_log, document
+- resource: one of sales_report, server_log, document, loan_application
 - parameters: any relevant details as a dict
 
 If the request doesn't match any action/resource combination,
@@ -112,7 +112,7 @@ still extract the closest action and resource you can infer."#;
                 },
                 "resource": {
                     "type": "string",
-                    "enum": ["sales_report", "server_log", "document"],
+                    "enum": ["sales_report", "server_log", "document", "loan_application"],
                     "description": "The resource to act on."
                 },
                 "parameters": {

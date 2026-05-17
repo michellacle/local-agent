@@ -31,6 +31,7 @@ pub struct WorkflowStep {
     pub worker_name: String,
     /// Optional condition to evaluate on the previous step's output.
     /// If present and evaluates to false, the workflow halts.
+    #[allow(clippy::type_complexity)]
     pub condition: Option<Box<dyn Fn(&str) -> bool>>,
     /// If true, a failure in this step immediately fails the workflow.
     pub critical: bool,
@@ -262,12 +263,9 @@ impl Supervisor {
             self.audit_entries.push(entry);
 
             // Check if step failed
-            if !self.audit_entries.last().unwrap().success {
-                if step.critical {
-                    self.status = WorkflowStatus::Failed;
-                    break;
-                }
-                // Non-critical: continue to next step
+            if !self.audit_entries.last().unwrap().success && step.critical {
+                self.status = WorkflowStatus::Failed;
+                break;
             }
 
             self.current_step += 1;

@@ -1,6 +1,9 @@
 use clap::{Parser, Subcommand};
 use local_agent::intent_extractor::IntentExtractor;
 use local_agent::llm_interface::{EmbeddingConfig, LLMConfig};
+use local_agent::loan_orchestrator::{
+    LoanOrchestratorAgent, MockCreditChecker, MockDocumentValidator, MockRiskAssessor,
+};
 
 const DEFAULT_PROVIDER_LLM: &str = "ollama-local";
 const DEFAULT_PROVIDER_EMBEDDING: &str = "ollama-local";
@@ -184,8 +187,60 @@ fn cmd_extract(args: &Commands) {
     match extractor.process(text) {
         Ok(route_result) => {
             println!("\nResult: {}", route_result.display());
-            if route_result.is_routed() {
-                println!("Agent: {}", route_result.agent_name().unwrap());
+
+            if let local_agent::RouteResult::Routed {
+                agent_name,
+                parameters,
+            } = &route_result
+            {
+                println!("Agent: {}", agent_name);
+
+                if agent_name == "LoanOrchestratorAgent" {
+                    let applicant_id = parameters
+                        .get("applicant_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("APP-UNKNOWN");
+                    let loan_amount = parameters
+                        .get("loan_amount")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0);
+                    let loan_type = parameters
+                        .get("loan_type")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("unknown");
+
+                    let orchestrator = LoanOrchestratorAgent::new(
+                        MockDocumentValidator::new("doc_validator", true),
+                        MockCreditChecker::new("credit_checker", 750),
+                        MockRiskAssessor::new("risk_assessor", "low"),
+                    );
+
+                    let application = serde_json::json!({
+                        "applicant_id": applicant_id,
+                        "loan_amount": loan_amount,
+                        "loan_type": loan_type,
+                        "documents": ["tax_return_2024", "pay_stub", "bank_statement"]
+                    })
+                    .to_string();
+
+                    let result = orchestrator.process(&application);
+
+                    println!("\nWorkflow Status: {:?}", result.status);
+                    println!("Steps Executed: {}", result.audit_entries.len());
+
+                    for entry in &result.audit_entries {
+                        let status_str = if entry.success { "OK" } else { "FAIL" };
+                        println!(
+                            "  [{}] {} ({})",
+                            status_str, entry.step_name, entry.worker_name
+                        );
+                    }
+
+                    println!(
+                        "\nDecision: {}",
+                        LoanOrchestratorAgent::decision_string(&result)
+                    );
+                }
             }
         }
         Err(e) => {
