@@ -269,7 +269,7 @@ fn test_sqlite_clear_removes_entries() {
     };
 
     let mut cache =
-        coordination_patterns::semantic_cache::SemanticCache::with_sqlite(0.92, 1000, db_path_str);
+        local_agent::semantic_cache::SemanticCache::with_sqlite(0.92, 1000, db_path_str);
     cache.store("Create a new document", &embedding, &intent);
     cache.clear();
     assert_eq!(cache.size(), 0);
