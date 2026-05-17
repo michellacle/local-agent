@@ -63,7 +63,16 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --ignore-filename-regex='tests-unit|/src/bin/' \
       --json \
       --output-path docs/coverage.json
-    echo "Coverage report written to docs/coverage.lcov and docs/coverage.json"
+    cargo llvm-cov \
+      --test test_capability_router \
+      --test test_intent_extractor \
+      --test test_llm_interface \
+      --test test_semantic_cache \
+      --test test_semantic_cache_utils \
+      --ignore-filename-regex='tests-unit|/src/bin/' \
+      --html \
+      --output-dir docs/coverage-html
+    echo "Coverage reports written to docs/coverage.lcov, docs/coverage.json, docs/coverage-html/"
 else
     echo "FAIL: cargo-llvm-cov not installed (cargo install cargo-llvm-cov)"
     exit 1
