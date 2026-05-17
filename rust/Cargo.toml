@@ -1,0 +1,21 @@
+[package]
+name = "coordination-patterns"
+version = "0.1.0"
+edition = "2024"
+description = "Multi-agent coordination patterns — capability graphs, intent routing, consensus, and more."
+license = "MIT"
+
+[[bin]]
+name = "coordination-patterns"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+schemars = "0.8"
+ureq = { version = "2", features = ["json"] }
+rusqlite = { version = "0.34", features = ["bundled"] }
+
+[dev-dependencies]
+tempfile = "3"
