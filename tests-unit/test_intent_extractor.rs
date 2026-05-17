@@ -1,10 +1,10 @@
-use coordination_patterns::intent_extractor::IntentExtractor;
+use local_agent::intent_extractor::IntentExtractor;
 
 #[test]
 fn test_intent_schema_has_required_fields() {
     // The schema is built internally, but we can verify the struct itself
     // has the expected fields by constructing one
-    use coordination_patterns::capability_router::{ActionType, ResourceType, RoutingIntent};
+    use local_agent::capability_router::{ActionType, ResourceType, RoutingIntent};
     use serde_json::json;
 
     let _intent = RoutingIntent {

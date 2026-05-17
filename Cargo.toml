@@ -1,12 +1,12 @@
 [package]
-name = "coordination-patterns"
+name = "local-agent"
 version = "0.1.0"
 edition = "2024"
-description = "Multi-agent coordination patterns — capability graphs, intent routing, consensus, and more."
+description = "Local AI agent coordination — intent extraction, semantic caching, and agent routing."
 license = "MIT"
 
 [[bin]]
-name = "coordination-patterns"
+name = "local-agent"
 path = "src/main.rs"
 
 [dependencies]

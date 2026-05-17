@@ -239,7 +239,7 @@ impl SemanticCache {
                     None => {
                         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
                         format!(
-                            "{}/.local/share/coordination-patterns/cache.db",
+                            "{}/.local/share/local-agent/cache.db",
                             home
                         )
                     }

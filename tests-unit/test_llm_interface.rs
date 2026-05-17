@@ -1,4 +1,4 @@
-use coordination_patterns::llm_interface::{LLMConfig, EmbeddingConfig};
+use local_agent::llm_interface::{LLMConfig, EmbeddingConfig};
 
 #[test]
 fn test_config_defaults() {

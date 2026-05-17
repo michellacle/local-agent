@@ -1,5 +1,5 @@
-use coordination_patterns::capability_router::{ActionType, ResourceType, RoutingIntent};
-use coordination_patterns::semantic_cache::{SemanticCache, CachedEntry};
+use local_agent::capability_router::{ActionType, ResourceType, RoutingIntent};
+use local_agent::semantic_cache::{SemanticCache, CachedEntry};
 use serde_json::json;
 
 fn intent(action: ActionType, resource: ResourceType) -> RoutingIntent {

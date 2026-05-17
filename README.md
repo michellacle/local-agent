@@ -53,7 +53,7 @@ All options are optional. Sensible defaults are applied:
 | `--host` | `localhost` | Override host for all providers |
 | `--cache` | `false` | Enable semantic intent cache |
 | `--cache-store` | `memory` | Cache persistence backend (`memory` or `sqlite`) |
-| `--cache-path` | `~/.local/share/coordination-patterns/cache.db` | Path to SQLite cache database |
+| `--cache-path` | `~/.local/share/local-agent/cache.db` | Path to SQLite cache database |
 
 The embedding model is only used when `--cache` is enabled.
 When `--cache-store sqlite` is used, cached entries persist across restarts.
@@ -64,7 +64,7 @@ When `--cache-store sqlite` is used, cached entries persist across restarts.
 Route requests to specialized agents using `(action, resource)` → `agent` lookup.
 
 ```rust
-use coordination_patterns::capability_router::{AgentRouter, RoutingIntent};
+use local_agent::capability_router::{AgentRouter, RoutingIntent};
 
 let mut router = AgentRouter::new();
 let intent = RoutingIntent {
@@ -80,7 +80,7 @@ let result = router.route_request(&intent);
 Talk to any OpenAI-compatible LLM without hardcoding endpoints.
 
 ```rust
-use coordination_patterns::llm_interface::{LLMClient, LLMConfig};
+use local_agent::llm_interface::{LLMClient, LLMConfig};
 
 let client = LLMClient::new(LLMConfig::default());
 let response = client.chat(&[
@@ -92,8 +92,8 @@ let response = client.chat(&[
 Natural language → LLM extracts structured intent → route to agent.
 
 ```rust
-use coordination_patterns::intent_extractor::IntentExtractor;
-use coordination_patterns::llm_interface::LLMConfig;
+use local_agent::intent_extractor::IntentExtractor;
+use local_agent::llm_interface::LLMConfig;
 
 let extractor = IntentExtractor::new(LLMConfig::default());
 let result = extractor.process("Find the Q1 sales report").unwrap();
@@ -107,9 +107,9 @@ let result = extractor.process("Find the Q1 sales report").unwrap();
 Bypass the LLM for previously seen (or similar) queries. Requires a separate embedding model.
 
 ```rust
-use coordination_patterns::intent_extractor::IntentExtractor;
-use coordination_patterns::llm_interface::{LLMConfig, EmbeddingConfig};
-use coordination_patterns::semantic_cache::CacheStore;
+use local_agent::intent_extractor::IntentExtractor;
+use local_agent::llm_interface::{LLMConfig, EmbeddingConfig};
+use local_agent::semantic_cache::CacheStore;
 
 let extractor = IntentExtractor::builder()
     .llm_config(LLMConfig::default())

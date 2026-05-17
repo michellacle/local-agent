@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
-use coordination_patterns::intent_extractor::IntentExtractor;
-use coordination_patterns::llm_interface::{EmbeddingConfig, LLMConfig};
+use local_agent::intent_extractor::IntentExtractor;
+use local_agent::llm_interface::{EmbeddingConfig, LLMConfig};
 
 const DEFAULT_PROVIDER_LLM: &str = "ollama-local";
 const DEFAULT_PROVIDER_EMBEDDING: &str = "ollama-local";
@@ -11,8 +11,8 @@ const DEFAULT_CACHE_STORE: &str = "sqlite";
 
 #[derive(Parser)]
 #[command(
-    name = "coordination-patterns",
-    about = "Multi-Agent Coordination Patterns — semantic intent extraction and agent routing.",
+    name = "local-agent",
+    about = "Local AI agent coordination — semantic intent extraction and agent routing.",
     long_about = None,
     version
 )]
@@ -137,7 +137,7 @@ fn cmd_extract(args: &Commands) {
         println!("Cache Store: {}", cache_store);
         let default_cache_path = {
             let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-            format!("{}/.local/share/coordination-patterns/cache.db", home)
+            format!("{}/.local/share/local-agent/cache.db", home)
         };
         let cp = cache_path.as_deref().unwrap_or(&default_cache_path);
         println!("Cache Path: {}", cp);

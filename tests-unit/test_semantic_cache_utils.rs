@@ -1,4 +1,4 @@
-use coordination_patterns::semantic_cache::cosine_similarity;
+use local_agent::semantic_cache::cosine_similarity;
 
 #[test]
 fn test_identical_vectors() {
