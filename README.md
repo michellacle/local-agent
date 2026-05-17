@@ -190,22 +190,21 @@ YES │       NO  │                 │
 
 ```text
 local-agent/
-  rust/
-    Cargo.toml
-    src/
-      lib.rs                       # library exports
-      main.rs                      # CLI (clap-based)
-      capability_router.rs         # Pattern #1
-      llm_interface.rs             # Pattern #2 (LLMConfig, EmbeddingConfig, clients)
-      intent_extractor.rs          # Pattern #3
-      semantic_cache.rs            # Pattern #4 (SemanticCache, cosine_similarity, stores)
-    tests/
-      test_capability_router.rs    # Unit tests
-      test_llm_interface.rs        # Unit tests
-      test_intent_extractor.rs     # Unit tests
-      test_semantic_cache.rs       # Unit tests
-      test_semantic_cache_utils.rs # Unit tests
-      integration_tests.rs         # Integration tests (SQLite + Ollama)
+  Cargo.toml
+  src/
+    lib.rs                       # library exports
+    main.rs                      # CLI (clap-based)
+    capability_router.rs         # Pattern #1
+    llm_interface.rs             # Pattern #2 (LLMConfig, EmbeddingConfig, clients)
+    intent_extractor.rs          # Pattern #3
+    semantic_cache.rs            # Pattern #4 (SemanticCache, cosine_similarity, stores)
+  tests/
+    test_capability_router.rs    # Unit tests
+    test_llm_interface.rs        # Unit tests
+    test_intent_extractor.rs     # Unit tests
+    test_semantic_cache.rs       # Unit tests
+    test_semantic_cache_utils.rs # Unit tests
+    integration_tests.rs         # Integration tests (SQLite + Ollama)
 ```
 
 Built in Rust with [`serde`](https://serde.rs/), [`clap`](https://docs.rs/clap/), [`ureq`](https://docs.rs/ureq/), [`rusqlite`](https://docs.rs/rusqlite/), and [`schemars`](https://docs.rs/schemars/).
@@ -213,12 +212,12 @@ Built in Rust with [`serde`](https://serde.rs/), [`clap`](https://docs.rs/clap/)
 ## Quality Standards
 
 - **Type safety**: Full static typing with Rust's type system — no runtime type errors.
-- **Unit tests**: Every feature has unit tests in `rust/tests/`.
+- **Unit tests**: Every feature has unit tests in `tests/`.
 - **Integration tests**: Features involving external subsystems (LLM API calls, SQLite I/O) have integration tests.
 - **Zero-cost abstractions**: No unnecessary allocations, sync-first design, minimal dependencies.
 
 ## Adding New Patterns
 
-1. Create a new module under `rust/src/<name>.rs`
-2. Add tests under `rust/tests/`
-3. Export from `rust/src/lib.rs`
+1. Create a new module under `src/<name>.rs`
+2. Add tests under `tests/`
+3. Export from `src/lib.rs`

@@ -7,7 +7,7 @@ const DEFAULT_PROVIDER_EMBEDDING: &str = "ollama-local";
 const DEFAULT_MODEL_LLM: &str = "qwen3.5:2b";
 const DEFAULT_MODEL_EMBEDDING: &str = "nomic-embed-text";
 const DEFAULT_HOST: &str = "localhost";
-const DEFAULT_CACHE_STORE: &str = "memory";
+const DEFAULT_CACHE_STORE: &str = "sqlite";
 
 #[derive(Parser)]
 #[command(
