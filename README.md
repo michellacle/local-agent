@@ -17,16 +17,16 @@ Proven patterns included: capability graphs, semantic intent extraction, agent r
 
 ```bash
 # Extract intent (uses defaults — no flags needed)
-cargo run -- extract "Find the Q1 sales report"
+cargo run --bin local-agent -- extract "Find the Q1 sales report"
 
 # Override the LLM model
-cargo run -- extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
+cargo run --bin local-agent -- extract "Find the Q1 sales report" --model-llm qwen3.5:0.8b
 
-# Enable semantic cache (uses defaults for both providers)
-cargo run -- extract "Find the Q1 sales report" --cache
+# Enable semantic cache (persistent SQLite backend)
+cargo run --bin local-agent -- extract "Find the Q1 sales report" --cache
 
 # Full customization
-cargo run -- extract "Find the Q1 sales report" \
+cargo run --bin local-agent -- extract "Find the Q1 sales report" \
   --model-llm qwen3.5:2b \
   --model-embedding nomic-embed-text \
   --cache \
@@ -41,6 +41,20 @@ cargo test --test integration_tests
 # Run all tests
 cargo test
 ```
+
+### Semantic Cache Usage
+
+The first run of any query is a **cache miss** — the LLM extracts the intent and the result is stored. Running the same (or a very similar) query again will be a **cache hit**, bypassing the LLM entirely:
+
+```bash
+# First run — cache miss (~2s, calls LLM)
+cargo run --bin local-agent -- extract "Find the Q1 sales report" --cache
+
+# Second run — cache hit (~0.01s, bypasses LLM)
+cargo run --bin local-agent -- extract "Find the Q1 sales report" --cache
+```
+
+The cache persists across restarts when using `--cache-store sqlite` (the default).
 
 ## CLI Options
 
