@@ -18,13 +18,13 @@ pub struct IntentExtractor {
 
 impl IntentExtractor {
     pub fn new(
-        config: Option<LLMConfig>,
+        llm_config: Option<LLMConfig>,
         embed_config: Option<EmbeddingConfig>,
         cache_enabled: bool,
         cache_store: &str,
         cache_store_path: Option<&str>,
     ) -> Self {
-        let client = LLMClient::new(config);
+        let client = LLMClient::new(llm_config);
         let embed_client = if cache_enabled {
             Some(EmbeddingClient::new(embed_config))
         } else {
