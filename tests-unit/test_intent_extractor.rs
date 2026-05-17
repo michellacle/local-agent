@@ -26,5 +26,11 @@ fn test_intent_schema_has_required_fields() {
 fn test_system_prompt_exists() {
     // The system prompt is hardcoded in IntentExtractor::extract
     // We verify it's non-empty by checking the extractor initializes
-    let _ = IntentExtractor::new(None, None, false, "memory", None);
+    let _ = IntentExtractor::new(
+        local_agent::llm_interface::LLMClient::new(None),
+        None,
+        false,
+        "memory",
+        None,
+    );
 }

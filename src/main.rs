@@ -151,9 +151,18 @@ fn cmd_extract(args: &Commands) {
     println!("Input: {}", text);
     println!("---");
 
+    let llm_client = local_agent::llm_interface::LLMClient::new(Some(llm_config));
+    let embed_client = if *cache {
+        Some(local_agent::llm_interface::EmbeddingClient::new(Some(
+            embed_config,
+        )))
+    } else {
+        None
+    };
+
     let mut extractor = IntentExtractor::new(
-        Some(llm_config),
-        if *cache { Some(embed_config) } else { None },
+        llm_client,
+        embed_client,
         *cache,
         cache_store,
         if cache_store == "sqlite" {

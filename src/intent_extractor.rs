@@ -1,5 +1,5 @@
 use crate::capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
-use crate::llm_interface::{EmbeddingClient, EmbeddingConfig, LLMClient, LLMConfig};
+use crate::llm_interface::{EmbeddingClient, LLMClient};
 use crate::semantic_cache::SemanticCache;
 
 /// Orchestrates the full pipeline: extracts intent from natural language, checks the semantic cache, and routes to the correct agent.
@@ -18,18 +18,12 @@ pub struct IntentExtractor {
 
 impl IntentExtractor {
     pub fn new(
-        llm_config: Option<LLMConfig>,
-        embed_config: Option<EmbeddingConfig>,
+        client: LLMClient,
+        embed_client: Option<EmbeddingClient>,
         cache_enabled: bool,
         cache_store: &str,
         cache_store_path: Option<&str>,
     ) -> Self {
-        let client = LLMClient::new(llm_config);
-        let embed_client = if cache_enabled {
-            Some(EmbeddingClient::new(embed_config))
-        } else {
-            None
-        };
         let cache = if cache_enabled {
             Some(SemanticCache::new(
                 0.92,

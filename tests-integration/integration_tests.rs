@@ -29,13 +29,16 @@ fn format_speed(v: f64) -> String {
 
 fn make_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
-    IntentExtractor::new(Some(config), None, false, "memory", None)
+    let client = local_agent::llm_interface::LLMClient::new(Some(config));
+    IntentExtractor::new(client, None, false, "memory", None)
 }
 
 fn make_cached_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
     let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
-    IntentExtractor::new(Some(config), Some(embed_config), true, "memory", None)
+    let client = local_agent::llm_interface::LLMClient::new(Some(config));
+    let embed_client = local_agent::llm_interface::EmbeddingClient::new(Some(embed_config));
+    IntentExtractor::new(client, Some(embed_client), true, "memory", None)
 }
 
 #[test]
