@@ -6,7 +6,9 @@ pub mod semantic_cache_sqlite;
 
 pub use capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
 pub use intent_extractor::IntentExtractor;
-pub use llm_interface::{EmbeddingClient, EmbeddingConfig, LLMClient, LLMConfig};
+pub use llm_interface::{
+    EmbeddingClient, EmbeddingClientTrait, EmbeddingConfig, LLMClient, LLMClientTrait, LLMConfig,
+};
 pub use semantic_cache::{
     CachedEntry, InMemorySemanticCache, MockSemanticCache, SemanticCache, cosine_similarity,
 };

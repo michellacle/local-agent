@@ -28,7 +28,8 @@ fn format_speed(v: f64) -> String {
 
 fn make_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
-    let client = local_agent::llm_interface::LLMClient::new(Some(config));
+    let client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
+        Box::new(local_agent::llm_interface::LLMClient::new(Some(config)));
     IntentExtractor::new(
         client,
         None,
@@ -39,8 +40,11 @@ fn make_extractor() -> IntentExtractor {
 fn make_cached_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
     let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
-    let client = local_agent::llm_interface::LLMClient::new(Some(config));
-    let embed_client = local_agent::llm_interface::EmbeddingClient::new(Some(embed_config));
+    let client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
+        Box::new(local_agent::llm_interface::LLMClient::new(Some(config)));
+    let embed_client: Box<dyn local_agent::llm_interface::EmbeddingClientTrait> = Box::new(
+        local_agent::llm_interface::EmbeddingClient::new(Some(embed_config)),
+    );
     let cache: Box<dyn local_agent::semantic_cache::SemanticCache> = Box::new(
         local_agent::semantic_cache::InMemorySemanticCache::new(0.92, 1000),
     );

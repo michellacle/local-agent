@@ -1,5 +1,56 @@
 use std::collections::HashMap;
 
+/// Trait for sending chat and structured-output requests to an LLM.
+pub trait LLMClientTrait: Send {
+    /// Send a chat request and return the raw text response.
+    fn chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        system_prompt: Option<&str>,
+        response_format: Option<serde_json::Value>,
+    ) -> Result<String, String>;
+
+    /// Send a structured chat request and return the parsed JSON response.
+    fn structured_chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        schema: serde_json::Value,
+        system_prompt: Option<&str>,
+    ) -> Result<serde_json::Value, String>;
+}
+
+impl LLMClientTrait for LLMClient {
+    fn chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        system_prompt: Option<&str>,
+        response_format: Option<serde_json::Value>,
+    ) -> Result<String, String> {
+        LLMClient::chat(self, messages, system_prompt, response_format)
+    }
+
+    fn structured_chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        schema: serde_json::Value,
+        system_prompt: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        LLMClient::structured_chat(self, messages, schema, system_prompt)
+    }
+}
+
+/// Trait for generating text embeddings.
+pub trait EmbeddingClientTrait: Send {
+    /// Generate an embedding vector for the given text.
+    fn embed(&self, text: &str) -> Result<Vec<f64>, String>;
+}
+
+impl EmbeddingClientTrait for EmbeddingClient {
+    fn embed(&self, text: &str) -> Result<Vec<f64>, String> {
+        EmbeddingClient::embed(self, text)
+    }
+}
+
 /// Configuration for connecting to an LLM provider.
 #[derive(Debug, Clone)]
 pub struct LLMConfig {

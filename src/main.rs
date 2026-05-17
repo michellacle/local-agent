@@ -151,14 +151,16 @@ fn cmd_extract(args: &Commands) {
     println!("Input: {}", text);
     println!("---");
 
-    let llm_client = local_agent::llm_interface::LLMClient::new(Some(llm_config));
+    let llm_client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
+        Box::new(local_agent::llm_interface::LLMClient::new(Some(llm_config)));
+    #[allow(clippy::type_complexity)]
     let (embed_client, cache): (
-        Option<_>,
+        Option<Box<dyn local_agent::llm_interface::EmbeddingClientTrait>>,
         Option<Box<dyn local_agent::semantic_cache::SemanticCache>>,
     ) = if *cache {
-        let embed_client = Some(local_agent::llm_interface::EmbeddingClient::new(Some(
-            embed_config,
-        )));
+        let embed_client: Box<dyn local_agent::llm_interface::EmbeddingClientTrait> = Box::new(
+            local_agent::llm_interface::EmbeddingClient::new(Some(embed_config)),
+        );
         let cache: Box<dyn local_agent::semantic_cache::SemanticCache> = if cache_store == "sqlite"
         {
             let default_cache_path = {
@@ -172,7 +174,7 @@ fn cmd_extract(args: &Commands) {
                 0.92, 1000,
             ))
         };
-        (embed_client, Some(cache))
+        (Some(embed_client), Some(cache))
     } else {
         (None, None)
     };
