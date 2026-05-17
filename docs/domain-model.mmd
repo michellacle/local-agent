@@ -88,10 +88,10 @@ classDiagram
     Connection : conn
   }
 
-  CachedEntry --> "intent" : RoutingIntent
-  EmbeddingClient --> "config" : EmbeddingConfig
-  IntentExtractor --> "client" : LLMClient
-  IntentExtractor --> "router" : AgentRouter
-  LLMClient --> "config" : LLMConfig
-  RoutingIntent --> "action" : ActionType
-  RoutingIntent --> "resource" : ResourceType
+  CachedEntry --> "intent" RoutingIntent
+  EmbeddingClient --> "config" EmbeddingConfig
+  IntentExtractor --> "client" LLMClient
+  IntentExtractor --> "router" AgentRouter
+  LLMClient --> "config" LLMConfig
+  RoutingIntent --> "action" ActionType
+  RoutingIntent --> "resource" ResourceType
