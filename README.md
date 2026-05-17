@@ -32,9 +32,14 @@ cargo run -- extract "Find the Q1 sales report" \
   --cache \
   --cache-store sqlite
 
-# Run tests
-cargo test -v                              # All tests (unit + integration)
-cargo test -- --include-ignored            # Include ignored integration tests
+# Run unit tests only (fast, no Ollama required)
+cargo test --test test_capability_router --test test_intent_extractor --test test_llm_interface --test test_semantic_cache --test test_semantic_cache_utils
+
+# Run integration tests (requires Ollama with qwen3.5:0.8b + nomic-embed-text)
+cargo test --test integration_tests
+
+# Run all tests
+cargo test
 ```
 
 ## CLI Options
@@ -198,12 +203,13 @@ local-agent/
     llm_interface.rs             # Pattern #2 (LLMConfig, EmbeddingConfig, clients)
     intent_extractor.rs          # Pattern #3
     semantic_cache.rs            # Pattern #4 (SemanticCache, cosine_similarity, stores)
-  tests/
+  tests-unit/
     test_capability_router.rs    # Unit tests
     test_llm_interface.rs        # Unit tests
     test_intent_extractor.rs     # Unit tests
     test_semantic_cache.rs       # Unit tests
     test_semantic_cache_utils.rs # Unit tests
+  tests-integration/
     integration_tests.rs         # Integration tests (SQLite + Ollama)
 ```
 
@@ -212,12 +218,12 @@ Built in Rust with [`serde`](https://serde.rs/), [`clap`](https://docs.rs/clap/)
 ## Quality Standards
 
 - **Type safety**: Full static typing with Rust's type system — no runtime type errors.
-- **Unit tests**: Every feature has unit tests in `tests/`.
+- **Unit tests**: Every feature has unit tests in `tests-unit/`.
 - **Integration tests**: Features involving external subsystems (LLM API calls, SQLite I/O) have integration tests.
 - **Zero-cost abstractions**: No unnecessary allocations, sync-first design, minimal dependencies.
 
 ## Adding New Patterns
 
 1. Create a new module under `src/<name>.rs`
-2. Add tests under `tests/`
+2. Add unit tests under `tests-unit/`, integration tests under `tests-integration/`
 3. Export from `src/lib.rs`
