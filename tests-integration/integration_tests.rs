@@ -1,7 +1,27 @@
+use std::sync::OnceLock;
+
 use coordination_patterns::capability_router::{ActionType, ResourceType, RoutingIntent};
 use coordination_patterns::intent_extractor::IntentExtractor;
 use coordination_patterns::llm_interface::{EmbeddingConfig, LLMConfig};
 use serde_json::json;
+
+static OLLAMA_CHECK: OnceLock<()> = OnceLock::new();
+
+fn ensure_ollama() {
+    OLLAMA_CHECK.get_or_init(|| {
+        let resp = ureq::get("http://localhost:11434/api/tags")
+            .timeout(std::time::Duration::from_secs(5))
+            .call();
+        match resp {
+            Ok(r) => {
+                let _ = r.into_string();
+            }
+            Err(e) => {
+                panic!("Ollama is not running or unreachable: {e}\nStart Ollama and ensure models qwen3.5:0.8b and nomic-embed-text are pulled.");
+            }
+        }
+    });
+}
 
 fn format_speed(v: f64) -> String {
     format!("{:.1}", v)
@@ -25,16 +45,16 @@ fn make_cached_extractor() -> IntentExtractor {
 }
 
 #[test]
-#[ignore]
 fn test_find_sales_report() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor.process("Find the Q1 sales report").unwrap();
     assert_eq!(result, "SalesAgent");
 }
 
 #[test]
-#[ignore]
 fn test_analyze_sales_report() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("I want to analyze our sales report performance")
@@ -43,8 +63,8 @@ fn test_analyze_sales_report() {
 }
 
 #[test]
-#[ignore]
 fn test_find_document() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("I need to find the regulatory document")
@@ -53,8 +73,8 @@ fn test_find_document() {
 }
 
 #[test]
-#[ignore]
 fn test_create_server_log() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a server log entry for the deployment")
@@ -63,8 +83,8 @@ fn test_create_server_log() {
 }
 
 #[test]
-#[ignore]
 fn test_find_server_log_error() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Find the server log from last night")
@@ -73,8 +93,8 @@ fn test_find_server_log_error() {
 }
 
 #[test]
-#[ignore]
 fn test_create_sales_report_error() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a new sales report for Q1")
@@ -83,8 +103,8 @@ fn test_create_sales_report_error() {
 }
 
 #[test]
-#[ignore]
 fn test_create_document_error() {
+    ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a document summarizing the audit")
@@ -93,8 +113,8 @@ fn test_create_document_error() {
 }
 
 #[test]
-#[ignore]
 fn test_cache_hit_is_faster() {
+    ensure_ollama();
     let mut extractor = make_cached_extractor();
     let query = "Find the Q1 sales report";
 
@@ -156,8 +176,8 @@ fn test_cache_hit_is_faster() {
 }
 
 #[test]
-#[ignore]
 fn test_cache_produces_speed_benefit() {
+    ensure_ollama();
     let mut extractor = make_cached_extractor();
     let query = "Analyze the quarterly sales report trends";
 
@@ -190,8 +210,8 @@ fn test_cache_produces_speed_benefit() {
 }
 
 #[test]
-#[ignore]
 fn test_cache_bypasses_llm_for_identical_query() {
+    ensure_ollama();
     let mut extractor = make_cached_extractor();
     let query = "Create a server log entry for the deployment";
 
