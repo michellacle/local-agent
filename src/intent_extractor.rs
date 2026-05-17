@@ -12,42 +12,24 @@ pub struct IntentExtractor {
     router: AgentRouter,
     /// Optional semantic cache for bypassing the LLM on similar queries.
     pub cache: Option<SemanticCache>,
-    /// Whether semantic caching is active.
-    cache_enabled: bool,
 }
 
 impl IntentExtractor {
     pub fn new(
         client: LLMClient,
         embed_client: Option<EmbeddingClient>,
-        cache_enabled: bool,
-        cache_store: &str,
-        cache_store_path: Option<&str>,
+        cache: Option<SemanticCache>,
     ) -> Self {
-        let cache = if cache_enabled {
-            Some(SemanticCache::new(
-                0.92,
-                1000,
-                cache_store,
-                cache_store_path,
-            ))
-        } else {
-            None
-        };
-
         Self {
             client,
             embed_client,
             router: AgentRouter::new(),
             cache,
-            cache_enabled,
         }
     }
 
     pub fn extract(&mut self, user_input: &str) -> Result<RoutingIntent, String> {
-        if self.cache_enabled
-            && let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client)
-        {
+        if let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client) {
             let embedding = embed_client.embed(user_input)?;
             if let Some(cached) = cache.lookup(&embedding) {
                 println!("Cache HIT (threshold {})", cache.threshold());
@@ -99,9 +81,7 @@ still extract the closest action and resource you can infer."#;
             parameters,
         };
 
-        if self.cache_enabled
-            && let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client)
-        {
+        if let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client) {
             let embedding = embed_client.embed(user_input)?;
             cache.store(user_input, &embedding, &intent);
             println!("Cache MISS → stored for future hits");

@@ -152,25 +152,26 @@ fn cmd_extract(args: &Commands) {
     println!("---");
 
     let llm_client = local_agent::llm_interface::LLMClient::new(Some(llm_config));
-    let embed_client = if *cache {
-        Some(local_agent::llm_interface::EmbeddingClient::new(Some(
+    let (embed_client, cache) = if *cache {
+        let embed_client = Some(local_agent::llm_interface::EmbeddingClient::new(Some(
             embed_config,
-        )))
+        )));
+        let cache = Some(local_agent::semantic_cache::SemanticCache::new(
+            0.92,
+            1000,
+            cache_store,
+            if cache_store == "sqlite" {
+                cache_path.as_deref()
+            } else {
+                None
+            },
+        ));
+        (embed_client, cache)
     } else {
-        None
+        (None, None)
     };
 
-    let mut extractor = IntentExtractor::new(
-        llm_client,
-        embed_client,
-        *cache,
-        cache_store,
-        if cache_store == "sqlite" {
-            cache_path.as_deref()
-        } else {
-            None
-        },
-    );
+    let mut extractor = IntentExtractor::new(llm_client, embed_client, cache);
 
     match extractor.process(text) {
         Ok(result) => println!("\nResult: {}", result),

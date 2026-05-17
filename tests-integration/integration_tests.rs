@@ -30,7 +30,7 @@ fn format_speed(v: f64) -> String {
 fn make_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
     let client = local_agent::llm_interface::LLMClient::new(Some(config));
-    IntentExtractor::new(client, None, false, "memory", None)
+    IntentExtractor::new(client, None, None)
 }
 
 fn make_cached_extractor() -> IntentExtractor {
@@ -38,7 +38,8 @@ fn make_cached_extractor() -> IntentExtractor {
     let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
     let client = local_agent::llm_interface::LLMClient::new(Some(config));
     let embed_client = local_agent::llm_interface::EmbeddingClient::new(Some(embed_config));
-    IntentExtractor::new(client, Some(embed_client), true, "memory", None)
+    let cache = local_agent::semantic_cache::SemanticCache::new(0.92, 1000, "memory", None);
+    IntentExtractor::new(client, Some(embed_client), Some(cache))
 }
 
 #[test]
