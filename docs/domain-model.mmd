@@ -2,16 +2,17 @@
 classDiagram
 
   class ActionType {
-    <<Find>>
-    <<Analyze>>
-    <<Create>>
+    <<enum>>
+    Find
+    Analyze
+    Create
   }
 
   class AgentRouter {
     HashMap<(String, String), String> : capability_graph
   }
 
-  class CacheStore: {
+  class CacheStore {
     <<trait>>
   }
 
@@ -64,9 +65,10 @@ classDiagram
   }
 
   class ResourceType {
-    <<SalesReport>>
-    <<ServerLog>>
-    <<Document>>
+    <<enum>>
+    SalesReport
+    ServerLog
+    Document
   }
 
   class RoutingIntent {
@@ -83,7 +85,7 @@ classDiagram
   }
 
   class SqliteCacheStore {
-    Connection> : conn
+    Connection : conn
   }
 
   CachedEntry --> "intent" : RoutingIntent
