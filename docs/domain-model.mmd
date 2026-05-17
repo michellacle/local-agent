@@ -1,20 +1,19 @@
 ```mermaid
-%% Domain Model — local-agent
+%% Domain Model — auto-generated from rustdoc
 classDiagram
 
   class ActionType {
     <<enum>>
-    Find
-    Analyze
-    Create
   }
 
   class AgentRouter {
-    HashMap<(String, String), String> : capability_graph
+    Maps (action, resource) pairs to agent names and dispatches requests.
+    std::collections::HashMap<(String, String), String> : capability_graph
   }
 
   class CacheStore {
     <<trait>>
+    Persistent or in-memory backend for storing cached entries.
   }
 
   class CachedEntry {
@@ -26,8 +25,9 @@ classDiagram
   }
 
   class EmbeddingClient {
+    HTTP client for generating text embeddings from an embedding provider.
     EmbeddingConfig : config
-    Agent : agent
+    ureq::Agent : agent
   }
 
   class EmbeddingConfig {
@@ -38,16 +38,18 @@ classDiagram
   }
 
   class IntentExtractor {
+    Orchestrates the full pipeline: extracts intent from natural language, checks the semantic cache, and routes to the correct agent.
     LLMClient : client
-    Option<EmbeddingClient> : embed_client
+    EmbeddingClient : embed_client
     AgentRouter : router
-    Option<SemanticCache> : cache
+    SemanticCache : cache
     bool : cache_enabled
   }
 
   class LLMClient {
+    HTTP client for sending chat and structured-output requests to an LLM.
     LLMConfig : config
-    Agent : agent
+    ureq::Agent : agent
   }
 
   class LLMConfig {
@@ -62,14 +64,12 @@ classDiagram
   }
 
   class MemoryCacheStore {
-    Mutex<Vec<CacheTuple>> : entries
+    In-memory implementation of `CacheStore` using a thread-safe vector.
+    std::sync::Mutex<Vec<CacheTuple>> : entries
   }
 
   class ResourceType {
     <<enum>>
-    SalesReport
-    ServerLog
-    Document
   }
 
   class RoutingIntent {
@@ -79,21 +79,26 @@ classDiagram
   }
 
   class SemanticCache {
+    Semantic cache that matches incoming query embeddings against stored entries using cosine similarity.
     f64 : threshold
     usize : max_size
-    Box<dyn CacheStore> : backend
+    CacheStore : backend
     Vec<CachedEntry> : entries
   }
 
   class SqliteCacheStore {
-    Connection : conn
+    SQLite-backed implementation of `CacheStore` for persistent caching.
+    std::sync::Mutex<rusqlite::Connection> : conn
   }
 
   CachedEntry --> "intent" RoutingIntent
   EmbeddingClient --> "config" EmbeddingConfig
   IntentExtractor --> "client" LLMClient
+  IntentExtractor --> "embed_client" EmbeddingClient
   IntentExtractor --> "router" AgentRouter
+  IntentExtractor --> "cache" SemanticCache
   LLMClient --> "config" LLMConfig
   RoutingIntent --> "action" ActionType
   RoutingIntent --> "resource" ResourceType
+  SemanticCache --> "backend" CacheStore
 ```

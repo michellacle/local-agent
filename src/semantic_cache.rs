@@ -1,6 +1,7 @@
 use crate::capability_router::RoutingIntent;
 use serde::{Deserialize, Serialize};
 
+/// Computes the cosine similarity between two vectors.
 pub fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
     let dot: f64 = a.iter().zip(b.iter()).map(|(x, y)| x * y).sum();
     let norm_a: f64 = a.iter().map(|x| x * x).sum::<f64>().sqrt();
@@ -11,12 +12,18 @@ pub fn cosine_similarity(a: &[f64], b: &[f64]) -> f64 {
     dot / (norm_a * norm_b)
 }
 
+/// A single cached query-to-intent mapping with its embedding and usage metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CachedEntry {
+    /// The original natural language query text.
     pub query: String,
+    /// The embedding vector of the query.
     pub embedding: Vec<f64>,
+    /// The resolved routing intent for this query.
     pub intent: RoutingIntent,
+    /// Unix timestamp when the entry was created.
     pub created_at: f64,
+    /// Number of times this entry has been matched on lookup.
     pub hit_count: u64,
 }
 
@@ -35,18 +42,27 @@ impl CachedEntry {
     }
 }
 
+/// Persistent or in-memory backend for storing cached entries.
 pub trait CacheStore: Send + Sync {
+    /// Returns all stored entries.
     fn get_all(&self) -> Vec<(String, Vec<f64>, RoutingIntent, f64, u64)>;
+    /// Inserts a new entry.
     fn add(&self, query: &str, embedding: &[f64], intent: &RoutingIntent);
+    /// Removes all entries.
     fn clear(&self);
+    /// Updates the hit count for a given query.
     fn update_hit(&self, query: &str, new_hit_count: u64);
+    /// Evicts least-used entries, keeping only the top N by hit count.
     fn evict(&self, keep_n: usize);
+    /// Closes any held resources (e.g., database connections).
     fn close(&self);
 }
 
 type CacheTuple = (String, Vec<f64>, RoutingIntent, f64, u64);
 
+/// In-memory implementation of `CacheStore` using a thread-safe vector.
 pub struct MemoryCacheStore {
+    /// Thread-safe list of cached tuples.
     entries: std::sync::Mutex<Vec<CacheTuple>>,
 }
 
@@ -109,7 +125,9 @@ impl CacheStore for MemoryCacheStore {
     fn close(&self) {}
 }
 
+/// SQLite-backed implementation of `CacheStore` for persistent caching.
 pub struct SqliteCacheStore {
+    /// Thread-safe SQLite database connection.
     conn: std::sync::Mutex<rusqlite::Connection>,
 }
 
@@ -222,10 +240,15 @@ impl CacheStore for SqliteCacheStore {
     }
 }
 
+/// Semantic cache that matches incoming query embeddings against stored entries using cosine similarity.
 pub struct SemanticCache {
+    /// Minimum cosine similarity score required for a cache hit.
     threshold: f64,
+    /// Maximum number of entries before eviction is triggered.
     max_size: usize,
+    /// Persistent or in-memory storage backend.
     backend: Box<dyn CacheStore>,
+    /// In-memory index of all cached entries for fast lookup.
     entries: Vec<CachedEntry>,
 }
 

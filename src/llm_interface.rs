@@ -1,14 +1,23 @@
 use std::collections::HashMap;
 
+/// Configuration for connecting to an LLM provider.
 #[derive(Debug, Clone)]
 pub struct LLMConfig {
+    /// Identifier for the provider (e.g., "ollama-local", "openai_compat").
     pub provider: String,
+    /// Base URL of the provider's API endpoint.
     pub base_url: String,
+    /// Model name to use for completions.
     pub model: String,
+    /// API key for authentication.
     pub api_key: String,
+    /// Sampling temperature for response generation.
     pub temperature: f64,
+    /// Maximum number of tokens in the response.
     pub max_tokens: u32,
+    /// Request timeout in seconds.
     pub timeout: u64,
+    /// When true, forces deterministic output (temperature=0, seed=0).
     pub deterministic: bool,
 }
 
@@ -70,11 +79,16 @@ impl Default for LLMConfig {
     }
 }
 
+/// Configuration for connecting to an embedding provider.
 #[derive(Debug, Clone)]
 pub struct EmbeddingConfig {
+    /// Identifier for the embedding provider.
     pub provider: String,
+    /// Base URL of the embedding API endpoint.
     pub base_url: String,
+    /// Embedding model name.
     pub model: String,
+    /// Request timeout in seconds.
     pub timeout: u64,
 }
 
@@ -101,8 +115,11 @@ impl Default for EmbeddingConfig {
     }
 }
 
+/// HTTP client for sending chat and structured-output requests to an LLM.
 pub struct LLMClient {
+    /// Connection and model configuration.
     config: LLMConfig,
+    /// Underlying HTTP agent.
     agent: ureq::Agent,
 }
 
@@ -171,8 +188,11 @@ impl LLMClient {
     }
 }
 
+/// HTTP client for generating text embeddings from an embedding provider.
 pub struct EmbeddingClient {
+    /// Embedding provider configuration.
     config: EmbeddingConfig,
+    /// Underlying HTTP agent.
     agent: ureq::Agent,
 }
 

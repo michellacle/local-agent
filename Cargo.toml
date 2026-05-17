@@ -9,6 +9,10 @@ license = "MIT"
 name = "local-agent"
 path = "src/main.rs"
 
+[[bin]]
+name = "generate-domain-language"
+path = "src/bin/generate-domain-language.rs"
+
 [dependencies]
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

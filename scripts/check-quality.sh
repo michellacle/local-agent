@@ -50,7 +50,7 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --test test_llm_interface \
       --test test_semantic_cache \
       --test test_semantic_cache_utils \
-      --ignore-filename-regex='tests-unit' \
+      --ignore-filename-regex='tests-unit|/src/bin/' \
       --fail-under-lines 35 \
       --lcov \
       --output-path docs/coverage.lcov
@@ -60,7 +60,7 @@ if command -v cargo-llvm-cov &>/dev/null; then
       --test test_llm_interface \
       --test test_semantic_cache \
       --test test_semantic_cache_utils \
-      --ignore-filename-regex='tests-unit' \
+      --ignore-filename-regex='tests-unit|/src/bin/' \
       --json \
       --output-path docs/coverage.json
     echo "Coverage report written to docs/coverage.lcov and docs/coverage.json"

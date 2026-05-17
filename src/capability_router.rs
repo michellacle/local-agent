@@ -2,31 +2,45 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// The kind of operation an agent can perform.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ActionType {
+    /// Locate an existing resource.
     Find,
+    /// Perform analysis on a resource.
     Analyze,
+    /// Generate a new resource.
     Create,
 }
 
+/// The kind of domain resource an action operates on.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ResourceType {
+    /// A sales report containing transactional data.
     SalesReport,
+    /// A server log with operational events.
     ServerLog,
+    /// A general-purpose document.
     Document,
 }
 
+/// A structured intent extracted from natural language, used to route to the correct agent.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct RoutingIntent {
+    /// The action to perform.
     pub action: ActionType,
+    /// The resource type the action targets.
     pub resource: ResourceType,
+    /// Arbitrary key-value parameters extracted from the request.
     #[serde(default)]
     pub parameters: Value,
 }
 
+/// Maps (action, resource) pairs to agent names and dispatches requests.
 pub struct AgentRouter {
+    /// Internal lookup table from (action, resource) to agent name.
     capability_graph: std::collections::HashMap<(String, String), String>,
 }
 
