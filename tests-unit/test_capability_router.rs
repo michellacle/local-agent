@@ -1,4 +1,4 @@
-use local_agent::capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
+use local_agent::capability_router::{ActionType, AgentRouter, RouteResult, ResourceType, RoutingIntent};
 use serde_json::json;
 
 #[test]
@@ -10,7 +10,10 @@ fn test_route_known_action() {
         parameters: json!({"date_range": "Q1-2026"}),
     };
     let result = router.route_request(&intent);
-    assert_eq!(result, "SalesAgent");
+    assert_eq!(result, RouteResult::Routed {
+        agent_name: "SalesAgent".into(),
+        parameters: json!({"date_range": "Q1-2026"}),
+    });
 }
 
 #[test]
@@ -22,7 +25,7 @@ fn test_route_unknown_action() {
         parameters: json!({}),
     };
     let result = router.route_request(&intent);
-    assert!(result.contains("Error"));
+    assert!(matches!(result, RouteResult::NotFound { .. }));
 }
 
 #[test]

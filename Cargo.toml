@@ -53,5 +53,13 @@ name = "test_semantic_cache_sqlite"
 path = "tests-integration/test_semantic_cache_sqlite.rs"
 
 [[test]]
+name = "test_supervisor"
+path = "tests-unit/test_supervisor.rs"
+
+[[test]]
+name = "test_loan_orchestrator"
+path = "tests-integration/test_loan_orchestrator.rs"
+
+[[test]]
 name = "integration_tests"
 path = "tests-integration/integration_tests.rs"

@@ -182,7 +182,12 @@ fn cmd_extract(args: &Commands) {
     let mut extractor = IntentExtractor::new(llm_client, embed_client, cache);
 
     match extractor.process(text) {
-        Ok(result) => println!("\nResult: {}", result),
+        Ok(route_result) => {
+            println!("\nResult: {}", route_result.display());
+            if route_result.is_routed() {
+                println!("Agent: {}", route_result.agent_name().unwrap());
+            }
+        }
         Err(e) => {
             eprintln!("\nError: {}", e);
             std::process::exit(1);

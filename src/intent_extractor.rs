@@ -1,4 +1,4 @@
-use crate::capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
+use crate::capability_router::{ActionType, AgentRouter, RouteResult, ResourceType, RoutingIntent};
 use crate::llm_interface::{EmbeddingClientTrait, LLMClientTrait};
 use crate::semantic_cache::SemanticCache;
 
@@ -90,7 +90,7 @@ still extract the closest action and resource you can infer."#;
         Ok(intent)
     }
 
-    pub fn process(&mut self, user_input: &str) -> Result<String, String> {
+    pub fn process(&mut self, user_input: &str) -> Result<RouteResult, String> {
         let intent = self.extract(user_input)?;
         println!(
             "Extracted intent: action={}, resource={}, params={}",

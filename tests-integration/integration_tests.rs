@@ -56,7 +56,7 @@ fn test_find_sales_report() {
     ensure_ollama();
     let mut extractor = make_extractor();
     let result = extractor.process("Find the Q1 sales report").unwrap();
-    assert_eq!(result, "SalesAgent");
+    assert_eq!(result.agent_name(), Some("SalesAgent"));
 }
 
 #[test]
@@ -66,7 +66,7 @@ fn test_analyze_sales_report() {
     let result = extractor
         .process("I want to analyze our sales report performance")
         .unwrap();
-    assert_eq!(result, "SalesAgent");
+    assert_eq!(result.agent_name(), Some("SalesAgent"));
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn test_find_document() {
     let result = extractor
         .process("I need to find the regulatory document")
         .unwrap();
-    assert_eq!(result, "ComplianceAgent");
+    assert_eq!(result.agent_name(), Some("ComplianceAgent"));
 }
 
 #[test]
@@ -86,7 +86,7 @@ fn test_create_server_log() {
     let result = extractor
         .process("Create a server log entry for the deployment")
         .unwrap();
-    assert_eq!(result, "DevOpsAgent");
+    assert_eq!(result.agent_name(), Some("DevOpsAgent"));
 }
 
 #[test]
@@ -96,7 +96,7 @@ fn test_find_server_log_error() {
     let result = extractor
         .process("Find the server log from last night")
         .unwrap();
-    assert!(result.contains("Error"));
+    assert!(!result.is_routed());
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn test_create_sales_report_error() {
     let result = extractor
         .process("Create a new sales report for Q1")
         .unwrap();
-    assert!(result.contains("Error"));
+    assert!(!result.is_routed());
 }
 
 #[test]
@@ -116,7 +116,7 @@ fn test_create_document_error() {
     let result = extractor
         .process("Create a document summarizing the audit")
         .unwrap();
-    assert!(result.contains("Error"));
+    assert!(!result.is_routed());
 }
 
 #[test]
@@ -155,8 +155,8 @@ fn test_cache_hit_is_faster() {
     // Verify routing
     let routed1 = extractor.process(query).unwrap();
     let routed2 = extractor.process(query).unwrap();
-    assert_eq!(routed1, "SalesAgent");
-    assert_eq!(routed1, routed2);
+    assert_eq!(routed1.agent_name(), Some("SalesAgent"));
+    assert_eq!(routed1.agent_name(), routed2.agent_name());
 
     // Second call should be significantly faster
     assert!(
@@ -193,7 +193,7 @@ fn test_cache_produces_speed_benefit() {
     let result1 = extractor.process(query).unwrap();
     let first_duration = t0.elapsed();
 
-    assert_eq!(result1, "SalesAgent");
+    assert_eq!(result1.agent_name(), Some("SalesAgent"));
     println!("First call (LLM): {:.2?}", first_duration);
 
     // Second call — cache hit, should be instant
@@ -201,7 +201,7 @@ fn test_cache_produces_speed_benefit() {
     let result2 = extractor.process(query).unwrap();
     let second_duration = t1.elapsed();
 
-    assert_eq!(result2, "SalesAgent");
+    assert_eq!(result2.agent_name(), Some("SalesAgent"));
     println!("Second call (cache): {:.4?}", second_duration);
 
     let speedup =
@@ -224,11 +224,11 @@ fn test_cache_bypasses_llm_for_identical_query() {
 
     // Warm the cache
     let result1 = extractor.process(query).unwrap();
-    assert_eq!(result1, "DevOpsAgent");
+    assert_eq!(result1.agent_name(), Some("DevOpsAgent"));
 
     // Repeat — should hit cache and return same result
     let result2 = extractor.process(query).unwrap();
-    assert_eq!(result2, "DevOpsAgent");
+    assert_eq!(result2.agent_name(), Some("DevOpsAgent"));
 
     // Verify cache has grown
     assert!(extractor.cache.as_ref().unwrap().size() >= 1);

@@ -38,6 +38,50 @@ pub struct RoutingIntent {
     pub parameters: Value,
 }
 
+/// Result of routing an intent to an agent.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum RouteResult {
+    /// The intent was matched to a registered agent.
+    Routed {
+        /// The name of the matched agent.
+        agent_name: String,
+        /// The parameters to pass to the agent.
+        parameters: Value,
+    },
+    /// No registered agent can handle the given action/resource pair.
+    NotFound {
+        /// The action that was requested.
+        action: String,
+        /// The resource that was requested.
+        resource: String,
+    },
+}
+
+impl RouteResult {
+    /// Returns true if the intent was successfully routed to an agent.
+    pub fn is_routed(&self) -> bool {
+        matches!(self, RouteResult::Routed { .. })
+    }
+
+    /// Returns the agent name if routed, or None if not found.
+    pub fn agent_name(&self) -> Option<&str> {
+        match self {
+            RouteResult::Routed { agent_name, .. } => Some(agent_name),
+            RouteResult::NotFound { .. } => None,
+        }
+    }
+
+    /// Returns a human-readable description of the routing result.
+    pub fn display(&self) -> String {
+        match self {
+            RouteResult::Routed { agent_name, .. } => format!("Routed to {agent_name}"),
+            RouteResult::NotFound { action, resource } => {
+                format!("No agent exists that can '{action}' a '{resource}'")
+            }
+        }
+    }
+}
+
 /// Maps (action, resource) pairs to agent names and dispatches requests.
 pub struct AgentRouter {
     /// Internal lookup table from (action, resource) to agent name.
@@ -57,7 +101,7 @@ impl AgentRouter {
         Self { capability_graph }
     }
 
-    pub fn route_request(&self, intent: &RoutingIntent) -> String {
+    pub fn route_request(&self, intent: &RoutingIntent) -> RouteResult {
         let key = (
             serde_json::to_value(&intent.action)
                 .unwrap()
@@ -72,24 +116,29 @@ impl AgentRouter {
         );
 
         match self.capability_graph.get(&key) {
-            Some(agent) => self.dispatch_to_agent(agent, &intent.parameters),
-            None => format!(
-                "Error: No agent exists that can '{}' a '{}'.",
-                serde_json::to_value(&intent.action)
+            Some(agent) => {
+                println!(
+                    "Routing to {} with params: {}",
+                    agent, intent.parameters
+                );
+                RouteResult::Routed {
+                    agent_name: agent.clone(),
+                    parameters: intent.parameters.clone(),
+                }
+            }
+            None => RouteResult::NotFound {
+                action: serde_json::to_value(&intent.action)
                     .unwrap()
                     .as_str()
-                    .unwrap(),
-                serde_json::to_value(&intent.resource)
+                    .unwrap()
+                    .to_string(),
+                resource: serde_json::to_value(&intent.resource)
                     .unwrap()
                     .as_str()
                     .unwrap()
-            ),
+                    .to_string(),
+            },
         }
-    }
-
-    fn dispatch_to_agent(&self, agent_name: &str, params: &Value) -> String {
-        println!("Routing to {agent_name} with params: {params}");
-        agent_name.to_string()
     }
 }
 
