@@ -8,17 +8,17 @@
 set -e
 
 UNIT_TESTS=(
-  test_capability_router
-  test_intent_extractor
-  test_llm_interface
-  test_semantic_cache
-  test_semantic_cache_utils
-  test_semantic_cache_mock
+  --test test_capability_router \
+  --test test_intent_extractor \
+  --test test_llm_interface \
+  --test test_semantic_cache \
+  --test test_semantic_cache_utils \
+  --test test_semantic_cache_mock
 )
 
 INTEGRATION_TESTS=(
-  integration_tests
-  test_semantic_cache_sqlite
+  --test integration_tests \
+  --test test_semantic_cache_sqlite
 )
 
 IGNORE_REGEX='tests-unit|tests-integration|/src/bin/|semantic_cache_sqlite'
@@ -36,7 +36,7 @@ fi
 # --- Unit coverage (fast gate) ---
 echo "=== Unit coverage (min 43% lines) ==="
 cargo llvm-cov \
-  --test "${UNIT_TESTS[@]}" \
+  "${UNIT_TESTS[@]}" \
   --ignore-filename-regex="$IGNORE_REGEX" \
   --fail-under-lines 43 \
   --summary-only
@@ -51,23 +51,23 @@ fi
 echo ""
 echo "=== Combined coverage (unit + integration, min 50% lines) ==="
 cargo llvm-cov \
-  --test "${UNIT_TESTS[@]}" \
-  --test "${INTEGRATION_TESTS[@]}" \
+  "${UNIT_TESTS[@]}" \
+  "${INTEGRATION_TESTS[@]}" \
   --ignore-filename-regex="$IGNORE_REGEX" \
   --fail-under-lines 50 \
   --lcov \
   --output-path docs/coverage.lcov
 
 cargo llvm-cov \
-  --test "${UNIT_TESTS[@]}" \
-  --test "${INTEGRATION_TESTS[@]}" \
+  "${UNIT_TESTS[@]}" \
+  "${INTEGRATION_TESTS[@]}" \
   --ignore-filename-regex="$IGNORE_REGEX" \
   --json \
   --output-path docs/coverage.json
 
 cargo llvm-cov \
-  --test "${UNIT_TESTS[@]}" \
-  --test "${INTEGRATION_TESTS[@]}" \
+  "${UNIT_TESTS[@]}" \
+  "${INTEGRATION_TESTS[@]}" \
   --ignore-filename-regex="$IGNORE_REGEX" \
   --html \
   --output-dir docs/coverage-html
