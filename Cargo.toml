@@ -19,3 +19,27 @@ rusqlite = { version = "0.34", features = ["bundled"] }
 
 [dev-dependencies]
 tempfile = "3"
+
+[[test]]
+name = "test_capability_router"
+path = "tests-unit/test_capability_router.rs"
+
+[[test]]
+name = "test_intent_extractor"
+path = "tests-unit/test_intent_extractor.rs"
+
+[[test]]
+name = "test_llm_interface"
+path = "tests-unit/test_llm_interface.rs"
+
+[[test]]
+name = "test_semantic_cache"
+path = "tests-unit/test_semantic_cache.rs"
+
+[[test]]
+name = "test_semantic_cache_utils"
+path = "tests-unit/test_semantic_cache_utils.rs"
+
+[[test]]
+name = "integration_tests"
+path = "tests-integration/integration_tests.rs"
