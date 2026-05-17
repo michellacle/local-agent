@@ -1,4 +1,4 @@
-use local_agent::llm_interface::{LLMConfig, EmbeddingConfig};
+use local_agent::llm_interface::{EmbeddingConfig, LLMConfig};
 
 #[test]
 fn test_config_defaults() {
@@ -32,10 +32,7 @@ fn test_embedding_config_ollama() {
 fn test_llm_config_deterministic_prepare() {
     let config = LLMConfig::ollama("localhost", "qwen3.5:2b", true);
     let payload = config.prepare();
-    assert_eq!(
-        payload.get("temperature").unwrap().as_f64().unwrap(),
-        0.0
-    );
+    assert_eq!(payload.get("temperature").unwrap().as_f64().unwrap(), 0.0);
     assert_eq!(payload.get("seed").unwrap().as_i64().unwrap(), 0);
 }
 

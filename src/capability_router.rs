@@ -1,6 +1,6 @@
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use schemars::JsonSchema;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
@@ -34,7 +34,10 @@ impl AgentRouter {
     pub fn new() -> Self {
         let mut capability_graph = std::collections::HashMap::new();
         capability_graph.insert(("find".into(), "sales_report".into()), "SalesAgent".into());
-        capability_graph.insert(("analyze".into(), "sales_report".into()), "SalesAgent".into());
+        capability_graph.insert(
+            ("analyze".into(), "sales_report".into()),
+            "SalesAgent".into(),
+        );
         capability_graph.insert(("find".into(), "document".into()), "ComplianceAgent".into());
         capability_graph.insert(("create".into(), "server_log".into()), "DevOpsAgent".into());
         Self { capability_graph }

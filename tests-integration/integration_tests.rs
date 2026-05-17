@@ -35,13 +35,7 @@ fn make_extractor() -> IntentExtractor {
 fn make_cached_extractor() -> IntentExtractor {
     let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
     let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
-    IntentExtractor::new(
-        Some(config),
-        Some(embed_config),
-        true,
-        "memory",
-        None,
-    )
+    IntentExtractor::new(Some(config), Some(embed_config), true, "memory", None)
 }
 
 #[test]
@@ -162,11 +156,11 @@ fn test_cache_hit_is_faster() {
     println!("\nFirst call  (cache miss): {:?}", first_elapsed);
     println!("Second call (cache hit) : {:?}", second_elapsed);
     let speedup = first_elapsed.as_secs_f64() / second_elapsed.as_secs_f64().max(f64::MIN_POSITIVE);
+    println!("Speedup               : {}x", format_speed(speedup));
     println!(
-        "Speedup               : {}x",
-        format_speed(speedup)
+        "Cache entries         : {}",
+        extractor.cache.as_ref().unwrap().size()
     );
-    println!("Cache entries         : {}", extractor.cache.as_ref().unwrap().size());
     println!(
         "Result                : action={}, resource={}, params={}",
         serde_json::to_value(&intent2.action).unwrap(),
@@ -197,8 +191,8 @@ fn test_cache_produces_speed_benefit() {
     assert_eq!(result2, "SalesAgent");
     println!("Second call (cache): {:.4?}", second_duration);
 
-    let speedup = first_duration.as_secs_f64()
-        / second_duration.as_secs_f64().max(f64::MIN_POSITIVE);
+    let speedup =
+        first_duration.as_secs_f64() / second_duration.as_secs_f64().max(f64::MIN_POSITIVE);
     println!("Speedup: {}x", format_speed(speedup));
 
     assert!(

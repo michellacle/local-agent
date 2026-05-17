@@ -24,7 +24,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Extract semantic intent from natural language and route to agent
-    #[command(about = "Run the full pipeline: Natural Language → LLM → RoutingIntent → AgentRouter → Agent")]
+    #[command(
+        about = "Run the full pipeline: Natural Language → LLM → RoutingIntent → AgentRouter → Agent"
+    )]
     Extract {
         /// Natural language input text
         text: String,
@@ -63,7 +65,11 @@ enum Commands {
     },
 }
 
-fn build_llm_config(provider: Option<String>, model: Option<String>, host: Option<String>) -> LLMConfig {
+fn build_llm_config(
+    provider: Option<String>,
+    model: Option<String>,
+    host: Option<String>,
+) -> LLMConfig {
     let p = provider.unwrap_or_else(|| DEFAULT_PROVIDER_LLM.into());
     let m = model.unwrap_or_else(|| DEFAULT_MODEL_LLM.into());
     let h = host.unwrap_or_else(|| DEFAULT_HOST.into());

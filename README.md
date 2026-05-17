@@ -219,8 +219,32 @@ Built in Rust with [`serde`](https://serde.rs/), [`clap`](https://docs.rs/clap/)
 
 - **Type safety**: Full static typing with Rust's type system — no runtime type errors.
 - **Unit tests**: Every feature has unit tests in `tests-unit/`.
-- **Integration tests**: Features involving external subsystems (LLM API calls, SQLite I/O) have integration tests.
+- **Integration tests**: Features involving external subsystems (LLM API calls, SQLite I/O) have integration tests in `tests-integration/`.
 - **Zero-cost abstractions**: No unnecessary allocations, sync-first design, minimal dependencies.
+
+## Quality Checks
+
+| Gate | Tool | When |
+|---|---|---|
+| Formatting | `cargo fmt --check` | Pre-commit hook |
+| Linting | `cargo clippy -- -D warnings` | Pre-commit hook |
+| Unit tests | `cargo test` (unit tests only) | Pre-commit hook |
+| Integration tests | `cargo test --test integration_tests` (requires Ollama) | Pre-push hook |
+| Security audit | `cargo audit` (optional) | Manual / CI |
+| Coverage report | `cargo llvm-cov` (optional) | Manual / CI |
+
+**Prerequisites:**
+
+```bash
+rustup component add clippy rustfmt
+cargo install cargo-audit cargo-llvm-cov  # optional
+```
+
+**Run the full suite:**
+
+```bash
+./scripts/check-quality.sh
+```
 
 ## Adding New Patterns
 

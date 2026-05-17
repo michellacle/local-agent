@@ -1,4 +1,4 @@
-use local_agent::capability_router::{AgentRouter, RoutingIntent, ActionType, ResourceType};
+use local_agent::capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
 use serde_json::json;
 
 #[test]

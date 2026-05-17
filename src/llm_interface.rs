@@ -95,8 +95,7 @@ impl Default for EmbeddingConfig {
             provider: "ollama-embedding".into(),
             base_url: std::env::var("EMBEDDING_BASE_URL")
                 .unwrap_or_else(|_| "http://localhost:11434".into()),
-            model: std::env::var("EMBEDDING_MODEL")
-                .unwrap_or_else(|_| "nomic-embed-text".into()),
+            model: std::env::var("EMBEDDING_MODEL").unwrap_or_else(|_| "nomic-embed-text".into()),
             timeout: 30,
         }
     }
@@ -139,9 +138,7 @@ impl LLMClient {
         req = req.set("Authorization", &format!("Bearer {}", self.config.api_key));
 
         let resp = req
-            .send_json(serde_json::Value::Object(
-                payload.into_iter().collect(),
-            ))
+            .send_json(serde_json::Value::Object(payload.into_iter().collect()))
             .map_err(|e| format!("HTTP request failed: {e}"))?;
 
         let data: serde_json::Value = resp
@@ -206,11 +203,7 @@ impl EmbeddingClient {
 
         data["embedding"]
             .as_array()
-            .and_then(|arr| {
-                arr.iter()
-                    .map(|v| v.as_f64())
-                    .collect::<Option<Vec<f64>>>()
-            })
+            .and_then(|arr| arr.iter().map(|v| v.as_f64()).collect::<Option<Vec<f64>>>())
             .ok_or_else(|| "Invalid embedding response".into())
     }
 }

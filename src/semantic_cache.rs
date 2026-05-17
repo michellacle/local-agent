@@ -44,8 +44,10 @@ pub trait CacheStore: Send + Sync {
     fn close(&self);
 }
 
+type CacheTuple = (String, Vec<f64>, RoutingIntent, f64, u64);
+
 pub struct MemoryCacheStore {
-    entries: std::sync::Mutex<Vec<(String, Vec<f64>, RoutingIntent, f64, u64)>>,
+    entries: std::sync::Mutex<Vec<CacheTuple>>,
 }
 
 impl MemoryCacheStore {
@@ -165,7 +167,9 @@ impl CacheStore for SqliteCacheStore {
         let mut stmt = conn
             .prepare("SELECT query, embedding, intent, created_at, hit_count FROM cache_entries")
             .expect("Failed to prepare statement");
-        let rows = stmt.query_map((), |row| Ok(self.row_to_tuple(row))).expect("Query failed");
+        let rows = stmt
+            .query_map((), |row| Ok(self.row_to_tuple(row)))
+            .expect("Query failed");
         rows.filter_map(|r| r.ok()).collect()
     }
 
@@ -226,22 +230,14 @@ pub struct SemanticCache {
 }
 
 impl SemanticCache {
-    pub fn new(
-        threshold: f64,
-        max_size: usize,
-        store: &str,
-        store_path: Option<&str>,
-    ) -> Self {
+    pub fn new(threshold: f64, max_size: usize, store: &str, store_path: Option<&str>) -> Self {
         let backend: Box<dyn CacheStore> = match store {
             "sqlite" => {
                 let path = match store_path {
                     Some(p) => p.to_string(),
                     None => {
                         let home = std::env::var("HOME").unwrap_or_else(|_| ".".into());
-                        format!(
-                            "{}/.local/share/local-agent/cache.db",
-                            home
-                        )
+                        format!("{}/.local/share/local-agent/cache.db", home)
                     }
                 };
                 Box::new(SqliteCacheStore::new(&path))
@@ -271,13 +267,15 @@ impl SemanticCache {
         let rows = self.backend.get_all();
         self.entries = rows
             .into_iter()
-            .map(|(query, embedding, intent, created_at, hit_count)| CachedEntry {
-                query,
-                embedding,
-                intent,
-                created_at,
-                hit_count,
-            })
+            .map(
+                |(query, embedding, intent, created_at, hit_count)| CachedEntry {
+                    query,
+                    embedding,
+                    intent,
+                    created_at,
+                    hit_count,
+                },
+            )
             .collect();
     }
 
@@ -293,14 +291,13 @@ impl SemanticCache {
             }
         }
 
-        if let Some(idx) = best_idx {
-            if best_score >= self.threshold {
-                let entry = &mut self.entries[idx];
-                entry.hit_count += 1;
-                self.backend
-                    .update_hit(&entry.query, entry.hit_count);
-                return Some(entry.intent.clone());
-            }
+        if let Some(idx) = best_idx
+            && best_score >= self.threshold
+        {
+            let entry = &mut self.entries[idx];
+            entry.hit_count += 1;
+            self.backend.update_hit(&entry.query, entry.hit_count);
+            return Some(entry.intent.clone());
         }
 
         None

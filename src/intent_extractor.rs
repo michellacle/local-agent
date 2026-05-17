@@ -1,5 +1,5 @@
 use crate::capability_router::{ActionType, AgentRouter, ResourceType, RoutingIntent};
-use crate::llm_interface::{EmbeddingClient, LLMClient, LLMConfig, EmbeddingConfig};
+use crate::llm_interface::{EmbeddingClient, EmbeddingConfig, LLMClient, LLMConfig};
 use crate::semantic_cache::SemanticCache;
 
 pub struct IntentExtractor {
@@ -25,7 +25,12 @@ impl IntentExtractor {
             None
         };
         let cache = if cache_enabled {
-            Some(SemanticCache::new(0.92, 1000, cache_store, cache_store_path))
+            Some(SemanticCache::new(
+                0.92,
+                1000,
+                cache_store,
+                cache_store_path,
+            ))
         } else {
             None
         };
@@ -40,13 +45,13 @@ impl IntentExtractor {
     }
 
     pub fn extract(&mut self, user_input: &str) -> Result<RoutingIntent, String> {
-        if self.cache_enabled {
-            if let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client) {
-                let embedding = embed_client.embed(user_input)?;
-                if let Some(cached) = cache.lookup(&embedding) {
-                    println!("Cache HIT (threshold {})", cache.threshold());
-                    return Ok(cached);
-                }
+        if self.cache_enabled
+            && let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client)
+        {
+            let embedding = embed_client.embed(user_input)?;
+            if let Some(cached) = cache.lookup(&embedding) {
+                println!("Cache HIT (threshold {})", cache.threshold());
+                return Ok(cached);
             }
         }
 
@@ -66,24 +71,27 @@ Given a natural language request, extract:
 If the request doesn't match any action/resource combination,
 still extract the closest action and resource you can infer."#;
 
-        let result: serde_json::Value = match self.client.structured_chat(
-            messages.clone(),
-            intent_schema,
-            Some(system_prompt),
-        ) {
-            Ok(r) => r,
-            Err(e) => {
-                eprintln!("Structured output failed ({e}), trying plain text fallback...");
-                let raw = self.client.chat(messages, Some(system_prompt), None)?;
-                serde_json::from_str(&raw).map_err(|e| format!("Fallback parse failed: {e}"))?
-            }
-        };
+        let result: serde_json::Value =
+            match self
+                .client
+                .structured_chat(messages.clone(), intent_schema, Some(system_prompt))
+            {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("Structured output failed ({e}), trying plain text fallback...");
+                    let raw = self.client.chat(messages, Some(system_prompt), None)?;
+                    serde_json::from_str(&raw).map_err(|e| format!("Fallback parse failed: {e}"))?
+                }
+            };
 
         let action: ActionType = serde_json::from_value(result["action"].clone())
             .map_err(|e| format!("Invalid action: {e}"))?;
         let resource: ResourceType = serde_json::from_value(result["resource"].clone())
             .map_err(|e| format!("Invalid resource: {e}"))?;
-        let parameters = result.get("parameters").cloned().unwrap_or(serde_json::json!({}));
+        let parameters = result
+            .get("parameters")
+            .cloned()
+            .unwrap_or(serde_json::json!({}));
 
         let intent = RoutingIntent {
             action,
@@ -91,12 +99,12 @@ still extract the closest action and resource you can infer."#;
             parameters,
         };
 
-        if self.cache_enabled {
-            if let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client) {
-                let embedding = embed_client.embed(user_input)?;
-                cache.store(user_input, &embedding, &intent);
-                println!("Cache MISS → stored for future hits");
-            }
+        if self.cache_enabled
+            && let (Some(cache), Some(embed_client)) = (&mut self.cache, &self.embed_client)
+        {
+            let embedding = embed_client.embed(user_input)?;
+            cache.store(user_input, &embedding, &intent);
+            println!("Cache MISS → stored for future hits");
         }
 
         Ok(intent)
