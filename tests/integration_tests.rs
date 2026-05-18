@@ -1,10 +1,24 @@
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use local_agent::capability_router::{ActionType, ResourceType};
 use local_agent::intent_extractor::IntentExtractor;
-use local_agent::llm_interface::{EmbeddingConfig, LLMConfig};
+use local_agent::llm_interface::{
+    EmbeddingClient, EmbeddingClientTrait, EmbeddingConfig, LLMClient, LLMClientTrait, LLMConfig,
+};
+use local_agent::semantic_cache::{InMemorySemanticCache, SemanticCache};
 
 static OLLAMA_CHECK: OnceLock<()> = OnceLock::new();
+static SHARED_LLM_CLIENT: OnceLock<LLMClient> = OnceLock::new();
+static SHARED_EMBED_CLIENT: OnceLock<EmbeddingClient> = OnceLock::new();
+static SETUP: OnceLock<()> = OnceLock::new();
+static LIVE_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn lock_live_test() -> std::sync::MutexGuard<'static, ()> {
+    LIVE_TEST_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 fn ensure_ollama() {
     OLLAMA_CHECK.get_or_init(|| {
@@ -16,10 +30,75 @@ fn ensure_ollama() {
                 let _ = r.into_string();
             }
             Err(e) => {
-                panic!("Ollama is not running or unreachable: {e}\nStart Ollama and ensure models qwen3.5:0.8b and nomic-embed-text are pulled.");
+                panic!("Error llm backend is not running or unreachable: {e}");
             }
         }
     });
+}
+
+fn shared_llm_config() -> LLMConfig {
+    let mut config = LLMConfig::ollama("localhost", "qwen3.5:2b", true);
+    config.max_tokens = 256;
+    config.timeout = 120;
+    config
+}
+
+fn shared_llm_client() -> &'static LLMClient {
+    SHARED_LLM_CLIENT.get_or_init(|| LLMClient::new(Some(shared_llm_config())))
+}
+
+fn shared_embed_client() -> &'static EmbeddingClient {
+    SHARED_EMBED_CLIENT.get_or_init(|| {
+        EmbeddingClient::new(Some(EmbeddingConfig::ollama(
+            "localhost",
+            "nomic-embed-text",
+        )))
+    })
+}
+
+/// Runs once per test suite: ensures Ollama is reachable and warms up the model.
+fn setup() {
+    SETUP.get_or_init(|| {
+        ensure_ollama();
+        let client = shared_llm_client();
+        let _ = client.chat(
+            vec![serde_json::json!({"role": "user", "content": "ok"})],
+            None,
+            None,
+        );
+    });
+}
+
+/// Wrapper that delegates to the shared LLM client so HTTP connections are reused.
+struct SharedLLMClientRef;
+
+impl LLMClientTrait for SharedLLMClientRef {
+    fn chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        system_prompt: Option<&str>,
+        response_format: Option<serde_json::Value>,
+    ) -> Result<String, String> {
+        shared_llm_client().chat(messages, system_prompt, response_format)
+    }
+
+    fn structured_chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        schema: serde_json::Value,
+        system_prompt: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        shared_llm_client().structured_chat(messages, schema, system_prompt)
+    }
+}
+
+/// Wrapper that delegates to the shared embedding client.
+struct SharedEmbedClientRef;
+
+impl EmbeddingClientTrait for SharedEmbedClientRef {
+    fn embed(&self, text: &str) -> Result<Vec<f64>, String> {
+        shared_embed_client().embed(text)
+    }
 }
 
 fn format_speed(v: f64) -> String {
@@ -27,33 +106,22 @@ fn format_speed(v: f64) -> String {
 }
 
 fn make_extractor() -> IntentExtractor {
-    let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
-    let client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
-        Box::new(local_agent::llm_interface::LLMClient::new(Some(config)));
-    IntentExtractor::new(
-        client,
-        None,
-        None::<Box<dyn local_agent::semantic_cache::SemanticCache>>,
-    )
+    setup();
+    let client: Box<dyn LLMClientTrait> = Box::new(SharedLLMClientRef);
+    IntentExtractor::new(client, None, None::<Box<dyn SemanticCache>>)
 }
 
 fn make_cached_extractor() -> IntentExtractor {
-    let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
-    let embed_config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
-    let client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
-        Box::new(local_agent::llm_interface::LLMClient::new(Some(config)));
-    let embed_client: Box<dyn local_agent::llm_interface::EmbeddingClientTrait> = Box::new(
-        local_agent::llm_interface::EmbeddingClient::new(Some(embed_config)),
-    );
-    let cache: Box<dyn local_agent::semantic_cache::SemanticCache> = Box::new(
-        local_agent::semantic_cache::InMemorySemanticCache::new(0.92, 1000),
-    );
+    setup();
+    let client: Box<dyn LLMClientTrait> = Box::new(SharedLLMClientRef);
+    let embed_client: Box<dyn EmbeddingClientTrait> = Box::new(SharedEmbedClientRef);
+    let cache: Box<dyn SemanticCache> = Box::new(InMemorySemanticCache::new(0.92, 1000));
     IntentExtractor::new(client, Some(embed_client), Some(cache))
 }
 
 #[test]
 fn test_find_sales_report() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor.process("Find the Q1 sales report").unwrap();
     assert_eq!(result.agent_name(), Some("SalesAgent"));
@@ -61,8 +129,10 @@ fn test_find_sales_report() {
 
 #[test]
 fn test_analyze_sales_report() {
-    ensure_ollama();
-    let mut extractor = make_extractor();
+    let _guard = lock_live_test();
+    setup();
+    let client: Box<dyn LLMClientTrait> = Box::new(SharedLLMClientRef);
+    let mut extractor = IntentExtractor::new(client, None, None::<Box<dyn SemanticCache>>);
     let result = extractor
         .process("I want to analyze our sales report performance")
         .unwrap();
@@ -71,7 +141,7 @@ fn test_analyze_sales_report() {
 
 #[test]
 fn test_find_document() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor
         .process("I need to find the regulatory document")
@@ -81,7 +151,7 @@ fn test_find_document() {
 
 #[test]
 fn test_create_server_log() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a server log entry for the deployment")
@@ -91,7 +161,7 @@ fn test_create_server_log() {
 
 #[test]
 fn test_find_server_log_error() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Find the server log from last night")
@@ -101,7 +171,7 @@ fn test_find_server_log_error() {
 
 #[test]
 fn test_create_sales_report_error() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a new sales report for Q1")
@@ -111,7 +181,7 @@ fn test_create_sales_report_error() {
 
 #[test]
 fn test_create_document_error() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_extractor();
     let result = extractor
         .process("Create a document summarizing the audit")
@@ -121,7 +191,7 @@ fn test_create_document_error() {
 
 #[test]
 fn test_cache_hit_is_faster() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_cached_extractor();
     let query = "Find the Q1 sales report";
 
@@ -184,7 +254,7 @@ fn test_cache_hit_is_faster() {
 
 #[test]
 fn test_cache_produces_speed_benefit() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_cached_extractor();
     let query = "Analyze the quarterly sales report trends";
 
@@ -218,7 +288,7 @@ fn test_cache_produces_speed_benefit() {
 
 #[test]
 fn test_cache_bypasses_llm_for_identical_query() {
-    ensure_ollama();
+    let _guard = lock_live_test();
     let mut extractor = make_cached_extractor();
     let query = "Create a server log entry for the deployment";
 
@@ -233,5 +303,3 @@ fn test_cache_bypasses_llm_for_identical_query() {
     // Verify cache has grown
     assert!(extractor.cache.as_ref().unwrap().size() >= 1);
 }
-
-// NOTE: sqlite-specific tests have been moved to tests-integration/test_semantic_cache_sqlite.rs

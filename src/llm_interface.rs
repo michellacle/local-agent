@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::time::Duration;
 
 /// Trait for sending chat and structured-output requests to an LLM.
 pub trait LLMClientTrait: Send {
@@ -206,6 +207,7 @@ impl LLMClient {
         req = req.set("Authorization", &format!("Bearer {}", self.config.api_key));
 
         let resp = req
+            .timeout(Duration::from_secs(self.config.timeout))
             .send_json(serde_json::Value::Object(payload.into_iter().collect()))
             .map_err(|e| format!("HTTP request failed: {e}"))?;
 
@@ -225,6 +227,10 @@ impl LLMClient {
         schema: serde_json::Value,
         system_prompt: Option<&str>,
     ) -> Result<serde_json::Value, String> {
+        if self.config.provider == "ollama-local" {
+            return self.ollama_structured_chat(messages, schema, system_prompt);
+        }
+
         let response_format = serde_json::json!({
             "type": "json_schema",
             "json_schema": {
@@ -236,6 +242,62 @@ impl LLMClient {
 
         let raw = self.chat(messages, system_prompt, Some(response_format))?;
         serde_json::from_str(&raw).map_err(|e| format!("Failed to parse structured output: {e}"))
+    }
+
+    fn ollama_structured_chat(
+        &self,
+        messages: Vec<serde_json::Value>,
+        schema: serde_json::Value,
+        system_prompt: Option<&str>,
+    ) -> Result<serde_json::Value, String> {
+        let mut msg_list = messages;
+        let schema_prompt = format!(
+            "{}\n\nReturn exactly one JSON object and no other text. The JSON must conform to this schema:\n{}",
+            system_prompt.unwrap_or(""),
+            schema
+        );
+        msg_list.insert(
+            0,
+            serde_json::json!({"role": "system", "content": schema_prompt}),
+        );
+
+        let base_url = self
+            .config
+            .base_url
+            .strip_suffix("/v1")
+            .unwrap_or(&self.config.base_url);
+        let url = format!("{base_url}/api/chat");
+        let payload = serde_json::json!({
+            "model": self.config.model,
+            "messages": msg_list,
+            "stream": false,
+            "think": false,
+            "format": "json",
+            "options": {
+                "temperature": if self.config.deterministic { 0.0 } else { self.config.temperature },
+                "num_predict": self.config.max_tokens,
+                "seed": if self.config.deterministic { 0 } else { -1 }
+            }
+        });
+
+        let resp = self
+            .agent
+            .post(&url)
+            .set("Content-Type", "application/json")
+            .timeout(Duration::from_secs(self.config.timeout))
+            .send_json(payload)
+            .map_err(|e| format!("HTTP request failed: {e}"))?;
+
+        let data: serde_json::Value = resp
+            .into_json::<serde_json::Value>()
+            .map_err(|e| format!("Failed to parse response: {e}"))?;
+
+        let content = data["message"]["content"]
+            .as_str()
+            .ok_or_else(|| "Invalid response format from Ollama".to_string())?;
+
+        serde_json::from_str(content)
+            .map_err(|e| format!("Failed to parse structured output: {e}; content={content:?}"))
     }
 }
 
@@ -265,6 +327,7 @@ impl EmbeddingClient {
             .agent
             .post(&url)
             .set("Content-Type", "application/json")
+            .timeout(Duration::from_secs(self.config.timeout))
             .send_json(payload)
             .map_err(|e| format!("HTTP request failed: {e}"))?;
 
@@ -276,5 +339,53 @@ impl EmbeddingClient {
             .as_array()
             .and_then(|arr| arr.iter().map(|v| v.as_f64()).collect::<Option<Vec<f64>>>())
             .ok_or_else(|| "Invalid embedding response".into())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_defaults() {
+        let config = LLMConfig::default();
+        assert_eq!(config.provider, "openai_compat");
+        assert_eq!(config.temperature, 0.0);
+        assert_eq!(config.max_tokens, 2048);
+    }
+
+    #[test]
+    fn test_config_ollama() {
+        let config = LLMConfig::ollama("localhost", "qwen3.5:2b", false);
+        assert_eq!(config.base_url, "http://localhost:11434/v1");
+        assert_eq!(config.model, "qwen3.5:2b");
+    }
+
+    #[test]
+    fn test_config_ollama_custom_host() {
+        let config = LLMConfig::ollama("minadioro", "qwen3.5:2b", false);
+        assert_eq!(config.base_url, "http://minadioro:11434/v1");
+    }
+
+    #[test]
+    fn test_embedding_config_ollama() {
+        let config = EmbeddingConfig::ollama("localhost", "nomic-embed-text");
+        assert_eq!(config.base_url, "http://localhost:11434");
+        assert_eq!(config.model, "nomic-embed-text");
+    }
+
+    #[test]
+    fn test_llm_config_deterministic_prepare() {
+        let config = LLMConfig::ollama("localhost", "qwen3.5:2b", true);
+        let payload = config.prepare();
+        assert_eq!(payload.get("temperature").unwrap().as_f64().unwrap(), 0.0);
+        assert_eq!(payload.get("seed").unwrap().as_i64().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_llm_config_non_deterministic_prepare() {
+        let config = LLMConfig::ollama("localhost", "qwen3.5:2b", false);
+        let payload = config.prepare();
+        assert!(!payload.contains_key("seed"));
     }
 }

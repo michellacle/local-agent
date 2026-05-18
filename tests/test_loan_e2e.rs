@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::sync::{Mutex, OnceLock};
 
 use local_agent::intent_extractor::IntentExtractor;
 use local_agent::llm_interface::LLMConfig;
@@ -9,6 +9,14 @@ use local_agent::semantic_cache::SemanticCache;
 use local_agent::supervisor::WorkflowStatus;
 
 static OLLAMA_CHECK: OnceLock<()> = OnceLock::new();
+static LIVE_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+fn lock_live_test() -> std::sync::MutexGuard<'static, ()> {
+    LIVE_TEST_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
+}
 
 fn ensure_ollama() {
     OLLAMA_CHECK.get_or_init(|| {
@@ -20,14 +28,16 @@ fn ensure_ollama() {
                 let _ = r.into_string();
             }
             Err(e) => {
-                panic!("Ollama is not running or unreachable: {e}\nStart Ollama and ensure model qwen3.5:0.8b is pulled.");
+                panic!("Ollama is not running or unreachable: {e}\nStart Ollama and ensure model qwen3.5:2b is pulled.");
             }
         }
     });
 }
 
 fn make_extractor() -> IntentExtractor {
-    let config = LLMConfig::ollama("localhost", "qwen3.5:0.8b", true);
+    let mut config = LLMConfig::ollama("localhost", "qwen3.5:2b", true);
+    config.max_tokens = 256;
+    config.timeout = 120;
     let client: Box<dyn local_agent::llm_interface::LLMClientTrait> =
         Box::new(local_agent::llm_interface::LLMClient::new(Some(config)));
     IntentExtractor::new(client, None, None::<Box<dyn SemanticCache>>)
@@ -46,6 +56,7 @@ fn build_application_from_params(params: &serde_json::Value) -> String {
 /// Real integration test: Ollama extracts loan intent -> routes to LoanOrchestratorAgent -> approved workflow.
 #[test]
 fn test_loan_intent_extraction_and_approval() {
+    let _guard = lock_live_test();
     ensure_ollama();
     let mut extractor = make_extractor();
 
@@ -84,6 +95,7 @@ fn test_loan_intent_extraction_and_approval() {
 /// Real integration test: Ollama extracts loan intent -> routes to LoanOrchestratorAgent -> rejected on invalid docs.
 #[test]
 fn test_loan_intent_extraction_rejected_invalid_docs() {
+    let _guard = lock_live_test();
     ensure_ollama();
     let mut extractor = make_extractor();
 
@@ -120,6 +132,7 @@ fn test_loan_intent_extraction_rejected_invalid_docs() {
 /// Real integration test: Ollama extracts loan intent -> routes to LoanOrchestratorAgent -> rejected on low credit.
 #[test]
 fn test_loan_intent_extraction_rejected_low_credit() {
+    let _guard = lock_live_test();
     ensure_ollama();
     let mut extractor = make_extractor();
 
